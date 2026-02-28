@@ -15,6 +15,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Public paths bypass auth entirely
+  if (PUBLIC_API_PATHS.has(pathname)) {
+    return NextResponse.next();
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
@@ -36,10 +41,6 @@ export async function middleware(request: NextRequest) {
 
   // Refresh session — must be called before checking user
   const { data } = await supabase.auth.getUser();
-
-  if (PUBLIC_API_PATHS.has(pathname)) {
-    return response;
-  }
 
   // Check Bearer header as alternative to cookie
   const authHeader = request.headers.get("authorization");
