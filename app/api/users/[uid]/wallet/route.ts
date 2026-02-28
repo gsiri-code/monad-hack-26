@@ -1,4 +1,4 @@
-import { badRequest, internalError, ok } from "@/lib/api/http";
+import { internalError, ok, requireUid } from "@/lib/api/http";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type RouteParams = {
@@ -6,11 +6,9 @@ type RouteParams = {
 };
 
 export async function GET(_: Request, { params }: RouteParams) {
-  const { uid } = await params;
-
-  if (!uid) {
-    return badRequest("uid is required.");
-  }
+  const uidResult = requireUid((await params).uid);
+  if (uidResult.response) return uidResult.response;
+  const { uid } = uidResult;
 
   try {
     const supabase = getSupabaseAdminClient();
@@ -51,7 +49,6 @@ export async function GET(_: Request, { params }: RouteParams) {
       wallet: [{ currencyName: "MON", amount: netBalance }],
     });
   } catch (error) {
-    const messageText = error instanceof Error ? error.message : undefined;
-    return internalError(messageText);
+    return internalError(error);
   }
 }

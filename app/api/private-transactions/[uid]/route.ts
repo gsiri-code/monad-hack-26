@@ -1,9 +1,13 @@
 import {
-  badRequest,
   internalError,
   notFound,
   ok,
+  requireUid,
 } from "@/lib/api/http";
+import {
+  toPrivateTxResponse,
+  type PrivateTransactionRow,
+} from "@/lib/api/execution";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type RouteParams = {
@@ -11,12 +15,11 @@ type RouteParams = {
 };
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const { uid } = await params;
-  const user = new URL(request.url).searchParams.get("user")?.trim() ?? null;
+  const uidResult = requireUid((await params).uid);
+  if (uidResult.response) return uidResult.response;
+  const { uid } = uidResult;
 
-  if (!uid) {
-    return badRequest("uid is required.");
-  }
+  const user = new URL(request.url).searchParams.get("user")?.trim() ?? null;
 
   try {
     const supabase = getSupabaseAdminClient();
@@ -38,18 +41,8 @@ export async function GET(request: Request, { params }: RouteParams) {
       return notFound("private transaction not found.");
     }
 
-    return ok({
-      uid: data.uid,
-      sender: data.sender,
-      receiver: data.receiver,
-      ciphertext: data.ciphertext,
-      nonce: data.nonce,
-      senderPublicKeyUsed: data.sender_pubkey_used,
-      timestamp: data.ts,
-      status: data.status,
-    });
+    return ok(toPrivateTxResponse(data as PrivateTransactionRow));
   } catch (error) {
-    const message = error instanceof Error ? error.message : undefined;
-    return internalError(message);
+    return internalError(error);
   }
 }

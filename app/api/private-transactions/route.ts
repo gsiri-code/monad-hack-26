@@ -3,7 +3,11 @@ import {
   internalError,
   ok,
 } from "@/lib/api/http";
-import { isExecutionStatus } from "@/lib/api/execution";
+import {
+  isExecutionStatus,
+  toPrivateTxResponse,
+  type PrivateTransactionRow,
+} from "@/lib/api/execution";
 import { parseLimit } from "@/lib/api/requests";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
@@ -54,19 +58,11 @@ export async function GET(request: Request) {
     }
 
     return ok({
-      privateTransactions: (data ?? []).map((row) => ({
-        uid: row.uid,
-        sender: row.sender,
-        receiver: row.receiver,
-        ciphertext: row.ciphertext,
-        nonce: row.nonce,
-        senderPublicKeyUsed: row.sender_pubkey_used,
-        timestamp: row.ts,
-        status: row.status,
-      })),
+      privateTransactions: (data ?? []).map((row) =>
+        toPrivateTxResponse(row as PrivateTransactionRow),
+      ),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : undefined;
-    return internalError(message);
+    return internalError(error);
   }
 }

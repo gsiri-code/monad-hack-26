@@ -1,4 +1,4 @@
-import { badRequest, conflict, created, internalError, notFound, ok, isUniqueViolation } from "@/lib/api/http";
+import { badRequest, conflict, created, internalError, notFound, ok, isUniqueViolation, parseJsonBody, requireUid } from "@/lib/api/http";
 import {
   canonicalFriendPair,
   isUuid,
@@ -17,22 +17,13 @@ type CreateFriendshipBody = {
 };
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const { uid } = await params;
+  const uidResult = requireUid((await params).uid);
+  if (uidResult.response) return uidResult.response;
+  const { uid } = uidResult;
 
-  if (!uid) {
-    return badRequest("uid is required.");
-  }
-
-  if (!isUuid(uid)) {
-    return badRequest("uid must be a valid UUID.");
-  }
-
-  let body: CreateFriendshipBody;
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest("Request body must be valid JSON.");
-  }
+  const bodyResult = await parseJsonBody<CreateFriendshipBody>(request);
+  if (bodyResult.response) return bodyResult.response;
+  const { body } = bodyResult;
 
   const friendUid = body.friendUid?.trim();
 
@@ -91,21 +82,14 @@ export async function POST(request: Request, { params }: RouteParams) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : undefined;
-    return internalError(message);
+    return internalError(error);
   }
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const { uid } = await params;
-
-  if (!uid) {
-    return badRequest("uid is required.");
-  }
-
-  if (!isUuid(uid)) {
-    return badRequest("uid must be a valid UUID.");
-  }
+  const uidResult = requireUid((await params).uid);
+  if (uidResult.response) return uidResult.response;
+  const { uid } = uidResult;
 
   const url = new URL(request.url);
   const usernameFilter = url.searchParams.get("username")?.trim() ?? "";
@@ -140,7 +124,6 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     return ok({ friendships: responseRows });
   } catch (error) {
-    const message = error instanceof Error ? error.message : undefined;
-    return internalError(message);
+    return internalError(error);
   }
 }

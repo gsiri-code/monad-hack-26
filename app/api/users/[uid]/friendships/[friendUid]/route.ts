@@ -1,5 +1,5 @@
-import { badRequest, internalError, notFound, ok } from "@/lib/api/http";
-import { canonicalFriendPair, isUuid } from "@/lib/api/friendships";
+import { badRequest, internalError, notFound, ok, requireUid } from "@/lib/api/http";
+import { canonicalFriendPair } from "@/lib/api/friendships";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type RouteParams = {
@@ -7,15 +7,15 @@ type RouteParams = {
 };
 
 export async function DELETE(_: Request, { params }: RouteParams) {
-  const { uid, friendUid } = await params;
+  const { uid: uidParam, friendUid: friendUidParam } = await params;
 
-  if (!uid || !friendUid) {
-    return badRequest("uid and friendUid are required.");
-  }
+  const uidResult = requireUid(uidParam);
+  if (uidResult.response) return uidResult.response;
+  const { uid } = uidResult;
 
-  if (!isUuid(uid) || !isUuid(friendUid)) {
-    return badRequest("uid and friendUid must be valid UUIDs.");
-  }
+  const friendUidResult = requireUid(friendUidParam, "friendUid");
+  if (friendUidResult.response) return friendUidResult.response;
+  const { uid: friendUid } = friendUidResult;
 
   if (uid === friendUid) {
     return badRequest("uid and friendUid must be different users.");
@@ -50,7 +50,6 @@ export async function DELETE(_: Request, { params }: RouteParams) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : undefined;
-    return internalError(message);
+    return internalError(error);
   }
 }

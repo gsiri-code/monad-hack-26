@@ -1,15 +1,11 @@
-import { badRequest, internalError, ok } from "@/lib/api/http";
+import { badRequest, internalError, ok, parseJsonBody } from "@/lib/api/http";
 import { buildPublicExecutionRequest } from "@/lib/api/execution";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 export async function POST(request: Request) {
-  let body: unknown;
-
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest("Request body must be valid JSON.");
-  }
+  const bodyResult = await parseJsonBody(request);
+  if (bodyResult.response) return bodyResult.response;
+  const { body } = bodyResult;
 
   const { data, error } = buildPublicExecutionRequest(
     body as Parameters<typeof buildPublicExecutionRequest>[0],
@@ -47,7 +43,6 @@ export async function POST(request: Request) {
       type: "public",
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : undefined;
-    return internalError(message);
+    return internalError(error);
   }
 }

@@ -1,4 +1,4 @@
-import { badRequest, internalError, notFound, ok } from "@/lib/api/http";
+import { badRequest, internalError, notFound, ok, parseJsonBody, requireUid } from "@/lib/api/http";
 import {
   isPatchStatus,
   toRequestResponse,
@@ -16,11 +16,9 @@ type PatchRequestBody = {
 };
 
 export async function GET(_: Request, { params }: RouteParams) {
-  const { uid } = await params;
-
-  if (!uid) {
-    return badRequest("uid is required.");
-  }
+  const uidResult = requireUid((await params).uid);
+  if (uidResult.response) return uidResult.response;
+  const { uid } = uidResult;
 
   try {
     const supabase = getSupabaseAdminClient();
@@ -40,24 +38,18 @@ export async function GET(_: Request, { params }: RouteParams) {
 
     return ok(toRequestResponse(data as RequestRow));
   } catch (error) {
-    const messageText = error instanceof Error ? error.message : undefined;
-    return internalError(messageText);
+    return internalError(error);
   }
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const { uid } = await params;
+  const uidResult = requireUid((await params).uid);
+  if (uidResult.response) return uidResult.response;
+  const { uid } = uidResult;
 
-  if (!uid) {
-    return badRequest("uid is required.");
-  }
-
-  let body: PatchRequestBody;
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest("Request body must be valid JSON.");
-  }
+  const bodyResult = await parseJsonBody<PatchRequestBody>(request);
+  if (bodyResult.response) return bodyResult.response;
+  const { body } = bodyResult;
 
   const status = body.status?.trim();
 
@@ -89,7 +81,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     return ok(toRequestResponse(data as RequestRow));
   } catch (error) {
-    const messageText = error instanceof Error ? error.message : undefined;
-    return internalError(messageText);
+    return internalError(error);
   }
 }

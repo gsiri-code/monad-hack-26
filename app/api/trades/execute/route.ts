@@ -1,4 +1,4 @@
-import { badRequest, ok } from "@/lib/api/http";
+import { badRequest, ok, parseJsonBody } from "@/lib/api/http";
 
 type ExecuteTradeBody = {
   requestId?: string;
@@ -6,13 +6,9 @@ type ExecuteTradeBody = {
 };
 
 export async function POST(request: Request) {
-  let body: ExecuteTradeBody;
-
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest("Request body must be valid JSON.");
-  }
+  const bodyResult = await parseJsonBody<ExecuteTradeBody>(request);
+  if (bodyResult.response) return bodyResult.response;
+  const { body } = bodyResult;
 
   const requestId = (body.requestId ?? body.requestID)?.trim();
   if (!requestId) {

@@ -1,4 +1,4 @@
-import { badRequest, created, internalError, ok } from "@/lib/api/http";
+import { badRequest, created, internalError, ok, parseJsonBody } from "@/lib/api/http";
 import {
   isRequestStatus,
   parseLimit,
@@ -18,13 +18,9 @@ type CreateRequestBody = {
 };
 
 export async function POST(request: Request) {
-  let body: CreateRequestBody;
-
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest("Request body must be valid JSON.");
-  }
+  const bodyResult = await parseJsonBody<CreateRequestBody>(request);
+  if (bodyResult.response) return bodyResult.response;
+  const { body } = bodyResult;
 
   const sender = (body.sender ?? body.user1)?.trim();
   const receiver = (body.receiver ?? body.user2)?.trim();
@@ -64,8 +60,7 @@ export async function POST(request: Request) {
       status: data.status,
     });
   } catch (error) {
-    const messageText = error instanceof Error ? error.message : undefined;
-    return internalError(messageText);
+    return internalError(error);
   }
 }
 
@@ -113,7 +108,6 @@ export async function GET(request: Request) {
       requests: (data as RequestRow[]).map(toRequestResponse),
     });
   } catch (error) {
-    const messageText = error instanceof Error ? error.message : undefined;
-    return internalError(messageText);
+    return internalError(error);
   }
 }

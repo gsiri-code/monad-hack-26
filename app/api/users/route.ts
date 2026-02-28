@@ -1,4 +1,4 @@
-import { badRequest, conflict, created, internalError, isUniqueViolation } from "@/lib/api/http";
+import { badRequest, conflict, created, internalError, isUniqueViolation, parseJsonBody } from "@/lib/api/http";
 import argon2 from "argon2";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
@@ -14,13 +14,9 @@ type CreateUserBody = {
 };
 
 export async function POST(request: Request) {
-  let body: CreateUserBody;
-
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest("Request body must be valid JSON.");
-  }
+  const bodyResult = await parseJsonBody<CreateUserBody>(request);
+  if (bodyResult.response) return bodyResult.response;
+  const { body } = bodyResult;
 
   const username = body.username?.trim();
   const walletAddress = body.walletAddress?.trim();
@@ -93,7 +89,6 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : undefined;
-    return internalError(message);
+    return internalError(error);
   }
 }
