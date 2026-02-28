@@ -1,5 +1,10 @@
 import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
-import { configVariable, defineConfig } from "hardhat/config";
+import { defineConfig } from "hardhat/config";
+import dotenv from "dotenv";
+import { resolve } from "path";
+
+// Load .env from the repo root (one level above brian/)
+dotenv.config({ path: resolve(import.meta.dirname, "../.env") });
 
 export default defineConfig({
   plugins: [hardhatToolboxMochaEthersPlugin],
@@ -28,7 +33,7 @@ export default defineConfig({
       type: "http",
       chainType: "l1",
       url: "https://testnet-rpc.monad.xyz",
-      accounts: [configVariable("MONAD_PRIVATE_KEY")],
+      accounts: process.env.MONAD_PRIVATE_KEY ? [process.env.MONAD_PRIVATE_KEY] : [],
     },
   },
 });
