@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Backend API Skeleton (Next.js + Supabase)
 
-## Getting Started
+This project now includes a backend API skeleton built with Next.js route handlers and Supabase Postgres.
 
-First, run the development server:
+## Environment Variables
+
+Create `.env.local` with:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+```
+
+## Run Locally
+
+```bash
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Supabase Migration
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Schema migration is included at `supabase/migrations/20260228040000_init.sql`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Apply migrations with your usual Supabase workflow (`supabase db push`, etc.).
 
-## Learn More
+## API Endpoints
 
-To learn more about Next.js, take a look at the following resources:
+- `POST /api/users`
+  - Body: `{ "username": "alice", "walletAddress": "0x..." }`
+- `POST /api/requests`
+  - Body: `{ "sender": "<uid>", "receiver": "<uid>", "amount": "10.5", "message": "optional" }`
+  - Backward-compatible aliases also accepted in body: `user1`, `user2`
+- `GET /api/requests?sender=<uid>&receiver=<uid>&status=open&limit=50`
+- `GET /api/requests/:uid`
+- `PATCH /api/requests/:uid`
+  - Body: `{ "status": "accepted|rejected|cancelled", "message": "optional" }`
+- `GET /api/users/:uid/wallet`
+  - Computes a net balance from successful transactions and returns one currency entry.
+- `POST /api/trades/execute`
+  - Stub endpoint for now. Body: `{ "requestId": "<uid>" }`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Supabase Type Generation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Generate DB types from your schema when needed:
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+supabase gen types typescript --linked --schema public > lib/db/database.types.ts
+```
