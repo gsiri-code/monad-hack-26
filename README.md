@@ -22,6 +22,16 @@ SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 bun dev
 ```
 
+## OpenAPI
+
+This project exposes a generated OpenAPI 3.1 document at:
+
+- `GET /api/openapi.json`
+
+The spec is generated from Zod-based contract definitions in:
+
+- `lib/openapi/spec.ts`
+
 ## Migrations
 
 Schema files:
