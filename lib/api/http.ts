@@ -20,6 +20,14 @@ export function conflict(message: string) {
   return NextResponse.json({ error: message }, { status: 409 });
 }
 
+export function unauthorized(message = "Unauthorized") {
+  return NextResponse.json({ error: message }, { status: 401 });
+}
+
+export function forbidden(message = "Forbidden") {
+  return NextResponse.json({ error: message }, { status: 403 });
+}
+
 export function internalError(cause?: string | unknown) {
   if (cause !== undefined) console.error("[internal error]", cause);
   return NextResponse.json({ error: "Internal server error" }, { status: 500 });
