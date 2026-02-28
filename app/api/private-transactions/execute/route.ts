@@ -1,8 +1,12 @@
-import { badRequest, internalError, ok, parseJsonBody } from "@/lib/api/http";
+import { badRequest, forbidden, internalError, ok, parseJsonBody, unauthorized } from "@/lib/api/http";
 import { buildPrivateExecutionRequest } from "@/lib/api/execution";
+import { getAuthUser } from "@/lib/db/auth-server";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 export async function POST(request: Request) {
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
+
   const bodyResult = await parseJsonBody(request);
   if (bodyResult.response) return bodyResult.response;
   const { body } = bodyResult;
@@ -14,6 +18,8 @@ export async function POST(request: Request) {
   if (error || !data) {
     return badRequest(error ?? "Invalid private execute payload.");
   }
+
+  if (user.id !== data.sender) return forbidden("Access denied.");
 
   try {
     const supabase = getSupabaseAdminClient();

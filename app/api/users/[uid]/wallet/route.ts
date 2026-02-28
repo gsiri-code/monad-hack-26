@@ -1,14 +1,20 @@
-import { internalError, ok, requireUid } from "@/lib/api/http";
+import { forbidden, internalError, ok, requireUid, unauthorized } from "@/lib/api/http";
+import { getAuthUser } from "@/lib/db/auth-server";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type RouteParams = {
   params: Promise<{ uid: string }>;
 };
 
-export async function GET(_: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: RouteParams) {
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
+
   const uidResult = requireUid((await params).uid);
   if (uidResult.response) return uidResult.response;
   const { uid } = uidResult;
+
+  if (user.id !== uid) return forbidden("Access denied.");
 
   try {
     const supabase = getSupabaseAdminClient();

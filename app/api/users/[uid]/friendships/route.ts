@@ -1,4 +1,4 @@
-import { badRequest, conflict, created, internalError, notFound, ok, isUniqueViolation, parseJsonBody, requireUid } from "@/lib/api/http";
+import { badRequest, conflict, created, forbidden, internalError, notFound, ok, isUniqueViolation, parseJsonBody, requireUid, unauthorized } from "@/lib/api/http";
 import {
   canonicalFriendPair,
   isUuid,
@@ -6,6 +6,7 @@ import {
   parseFriendshipsLimit,
   type FriendUserRow,
 } from "@/lib/api/friendships";
+import { getAuthUser } from "@/lib/db/auth-server";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type RouteParams = {
@@ -17,9 +18,14 @@ type CreateFriendshipBody = {
 };
 
 export async function POST(request: Request, { params }: RouteParams) {
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
+
   const uidResult = requireUid((await params).uid);
   if (uidResult.response) return uidResult.response;
   const { uid } = uidResult;
+
+  if (user.id !== uid) return forbidden("Access denied.");
 
   const bodyResult = await parseJsonBody<CreateFriendshipBody>(request);
   if (bodyResult.response) return bodyResult.response;
@@ -87,9 +93,14 @@ export async function POST(request: Request, { params }: RouteParams) {
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
+
   const uidResult = requireUid((await params).uid);
   if (uidResult.response) return uidResult.response;
   const { uid } = uidResult;
+
+  if (user.id !== uid) return forbidden("Access denied.");
 
   const url = new URL(request.url);
   const usernameFilter = url.searchParams.get("username")?.trim() ?? "";

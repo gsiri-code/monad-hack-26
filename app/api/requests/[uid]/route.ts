@@ -1,9 +1,10 @@
-import { badRequest, internalError, notFound, ok, parseJsonBody, requireUid } from "@/lib/api/http";
+import { badRequest, forbidden, internalError, notFound, ok, parseJsonBody, requireUid, unauthorized } from "@/lib/api/http";
 import {
   isPatchStatus,
   toRequestResponse,
   type RequestRow,
 } from "@/lib/api/requests";
+import { getAuthUser } from "@/lib/db/auth-server";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type RouteParams = {
@@ -15,7 +16,10 @@ type PatchRequestBody = {
   message?: string | null;
 };
 
-export async function GET(_: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: RouteParams) {
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
+
   const uidResult = requireUid((await params).uid);
   if (uidResult.response) return uidResult.response;
   const { uid } = uidResult;
@@ -36,13 +40,21 @@ export async function GET(_: Request, { params }: RouteParams) {
       return notFound("request not found.");
     }
 
-    return ok(toRequestResponse(data as RequestRow));
+    const row = data as RequestRow;
+    if (row.sender !== user.id && row.receiver !== user.id) {
+      return forbidden("Access denied.");
+    }
+
+    return ok(toRequestResponse(row));
   } catch (error) {
     return internalError(error);
   }
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
+
   const uidResult = requireUid((await params).uid);
   if (uidResult.response) return uidResult.response;
   const { uid } = uidResult;
@@ -64,6 +76,27 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   try {
     const supabase = getSupabaseAdminClient();
+
+    // Fetch first to verify ownership
+    const { data: existing, error: fetchError } = await supabase
+      .from("requests")
+      .select("uid, sender, receiver, amount, ts, status, message")
+      .eq("uid", uid)
+      .maybeSingle();
+
+    if (fetchError) {
+      return internalError(fetchError.message);
+    }
+
+    if (!existing) {
+      return notFound("request not found.");
+    }
+
+    const existingRow = existing as RequestRow;
+    if (existingRow.sender !== user.id && existingRow.receiver !== user.id) {
+      return forbidden("Access denied.");
+    }
+
     const { data, error } = await supabase
       .from("requests")
       .update(payload)

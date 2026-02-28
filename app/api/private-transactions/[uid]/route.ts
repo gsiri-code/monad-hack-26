@@ -1,13 +1,16 @@
 import {
+  forbidden,
   internalError,
   notFound,
   ok,
   requireUid,
+  unauthorized,
 } from "@/lib/api/http";
 import {
   toPrivateTxResponse,
   type PrivateTransactionRow,
 } from "@/lib/api/execution";
+import { getAuthUser } from "@/lib/db/auth-server";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type RouteParams = {
@@ -15,11 +18,12 @@ type RouteParams = {
 };
 
 export async function GET(request: Request, { params }: RouteParams) {
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
+
   const uidResult = requireUid((await params).uid);
   if (uidResult.response) return uidResult.response;
   const { uid } = uidResult;
-
-  const user = new URL(request.url).searchParams.get("user")?.trim() ?? null;
 
   try {
     const supabase = getSupabaseAdminClient();
@@ -37,11 +41,12 @@ export async function GET(request: Request, { params }: RouteParams) {
       return notFound("private transaction not found.");
     }
 
-    if (user && data.sender !== user && data.receiver !== user) {
-      return notFound("private transaction not found.");
+    const row = data as PrivateTransactionRow;
+    if (row.sender !== user.id && row.receiver !== user.id) {
+      return forbidden("Access denied.");
     }
 
-    return ok(toPrivateTxResponse(data as PrivateTransactionRow));
+    return ok(toPrivateTxResponse(row));
   } catch (error) {
     return internalError(error);
   }

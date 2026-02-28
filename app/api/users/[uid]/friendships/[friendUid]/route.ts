@@ -1,17 +1,23 @@
-import { badRequest, internalError, notFound, ok, requireUid } from "@/lib/api/http";
+import { badRequest, forbidden, internalError, notFound, ok, requireUid, unauthorized } from "@/lib/api/http";
 import { canonicalFriendPair } from "@/lib/api/friendships";
+import { getAuthUser } from "@/lib/db/auth-server";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type RouteParams = {
   params: Promise<{ uid: string; friendUid: string }>;
 };
 
-export async function DELETE(_: Request, { params }: RouteParams) {
+export async function DELETE(request: Request, { params }: RouteParams) {
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
+
   const { uid: uidParam, friendUid: friendUidParam } = await params;
 
   const uidResult = requireUid(uidParam);
   if (uidResult.response) return uidResult.response;
   const { uid } = uidResult;
+
+  if (user.id !== uid) return forbidden("Access denied.");
 
   const friendUidResult = requireUid(friendUidParam, "friendUid");
   if (friendUidResult.response) return friendUidResult.response;

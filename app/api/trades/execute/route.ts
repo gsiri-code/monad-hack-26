@@ -1,4 +1,5 @@
-import { badRequest, ok, parseJsonBody } from "@/lib/api/http";
+import { badRequest, ok, parseJsonBody, unauthorized } from "@/lib/api/http";
+import { getAuthUser } from "@/lib/db/auth-server";
 
 type ExecuteTradeBody = {
   requestId?: string;
@@ -6,6 +7,9 @@ type ExecuteTradeBody = {
 };
 
 export async function POST(request: Request) {
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
+
   const bodyResult = await parseJsonBody<ExecuteTradeBody>(request);
   if (bodyResult.response) return bodyResult.response;
   const { body } = bodyResult;
