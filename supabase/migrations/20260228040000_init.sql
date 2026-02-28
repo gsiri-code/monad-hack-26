@@ -1,40 +1,43 @@
-create extension if not exists pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-create table if not exists users (
-  uid uuid primary key default gen_random_uuid(),
-  username text not null unique,
-  wallet_address text not null unique,
-  created_at timestamptz not null default now()
+-- users: identity + wallet mapping
+CREATE TABLE users (
+  uid            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username       TEXT NOT NULL UNIQUE,
+  wallet_address TEXT NOT NULL UNIQUE,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-create table if not exists transactions (
-  uid uuid primary key default gen_random_uuid(),
-  sender uuid not null references users(uid) on delete restrict,
-  receiver uuid not null references users(uid) on delete restrict,
-  amount numeric(78, 18) not null check (amount > 0),
-  ts timestamptz not null default now(),
-  status text not null check (status in ('pending', 'success', 'failure')),
-  message text,
+-- transactions: settled transfers between users
+CREATE TABLE transactions (
+  uid        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sender     UUID NOT NULL REFERENCES users(uid) ON DELETE RESTRICT,
+  receiver   UUID NOT NULL REFERENCES users(uid) ON DELETE RESTRICT,
+  amount     NUMERIC(78, 18) NOT NULL CHECK (amount > 0),
+  ts         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  status     TEXT NOT NULL CHECK (status IN ('pending', 'success', 'failure')),
+  message    TEXT,
 
-  check (sender <> receiver)
+  CHECK (sender <> receiver)
 );
 
-create index if not exists idx_transactions_sender_ts on transactions (sender, ts desc);
-create index if not exists idx_transactions_receiver_ts on transactions (receiver, ts desc);
-create index if not exists idx_transactions_status_ts on transactions (status, ts desc);
+CREATE INDEX idx_transactions_sender_ts   ON transactions (sender, ts DESC);
+CREATE INDEX idx_transactions_receiver_ts ON transactions (receiver, ts DESC);
+CREATE INDEX idx_transactions_status_ts   ON transactions (status, ts DESC);
 
-create table if not exists requests (
-  uid uuid primary key default gen_random_uuid(),
-  sender uuid not null references users(uid) on delete restrict,
-  receiver uuid not null references users(uid) on delete restrict,
-  amount numeric(78, 18) not null check (amount > 0),
-  ts timestamptz not null default now(),
-  status text not null check (status in ('open', 'accepted', 'rejected', 'cancelled', 'expired')),
-  message text,
+-- requests: intent to pay / trade request before settlement
+CREATE TABLE requests (
+  uid        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sender     UUID NOT NULL REFERENCES users(uid) ON DELETE RESTRICT,
+  receiver   UUID NOT NULL REFERENCES users(uid) ON DELETE RESTRICT,
+  amount     NUMERIC(78, 18) NOT NULL CHECK (amount > 0),
+  ts         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  status     TEXT NOT NULL CHECK (status IN ('open', 'accepted', 'rejected', 'cancelled', 'expired')),
+  message    TEXT,
 
-  check (sender <> receiver)
+  CHECK (sender <> receiver)
 );
 
-create index if not exists idx_requests_sender_ts on requests (sender, ts desc);
-create index if not exists idx_requests_receiver_ts on requests (receiver, ts desc);
-create index if not exists idx_requests_status_ts on requests (status, ts desc);
+CREATE INDEX idx_requests_sender_ts   ON requests (sender, ts DESC);
+CREATE INDEX idx_requests_receiver_ts ON requests (receiver, ts DESC);
+CREATE INDEX idx_requests_status_ts   ON requests (status, ts DESC);
