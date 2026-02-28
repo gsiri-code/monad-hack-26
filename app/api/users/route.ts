@@ -5,6 +5,7 @@ import { getSupabaseAdminClient } from "@/lib/db/server";
 type CreateUserBody = {
   username?: string;
   walletAddress?: string;
+  encryptionPublicKey?: string;
   phoneNumber?: string;
   firstName?: string;
   lastName?: string;
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
 
   const username = body.username?.trim();
   const walletAddress = body.walletAddress?.trim();
+  const encryptionPublicKey = body.encryptionPublicKey?.trim() || null;
   const phoneNumber = body.phoneNumber?.trim();
   const firstName = body.firstName?.trim();
   const lastName = body.lastName?.trim();
@@ -57,6 +59,7 @@ export async function POST(request: Request) {
       .insert({
         username,
         wallet_address: walletAddress,
+        encryption_public_key: encryptionPublicKey,
         phone_number: phoneNumber,
         first_name: firstName,
         last_name: lastName,
@@ -64,7 +67,7 @@ export async function POST(request: Request) {
         password_hash: passwordHash,
       })
       .select(
-        "uid, username, wallet_address, phone_number, first_name, last_name, email",
+        "uid, username, wallet_address, encryption_public_key, phone_number, first_name, last_name, email",
       )
       .single();
 
@@ -82,6 +85,7 @@ export async function POST(request: Request) {
         uid: data.uid,
         username: data.username,
         walletAddress: data.wallet_address,
+        encryptionPublicKey: data.encryption_public_key,
         phoneNumber: data.phone_number,
         firstName: data.first_name,
         lastName: data.last_name,
