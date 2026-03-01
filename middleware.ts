@@ -7,6 +7,7 @@ const PUBLIC_API_PATHS = new Set([
   "/api/auth/magic/verify",
   "/api/telegram",
   "/api/telegram/stream",
+  "/api/bridge-test", // DEV ONLY — remove before prod
 ]);
 
 export async function middleware(request: NextRequest) {
