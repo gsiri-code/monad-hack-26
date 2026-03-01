@@ -175,7 +175,7 @@ export default function ProfilePage() {
               <Input
                 value={addFriendUid}
                 onChange={(e) => setAddFriendUid(e.target.value)}
-                placeholder="Friend's UID"
+                placeholder="Friend's phone number"
               />
             </div>
             <Button type="submit" disabled={addLoading}>

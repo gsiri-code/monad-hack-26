@@ -215,7 +215,7 @@ export default function MessagesPage() {
               <div className="space-y-2">
                 {[
                   '"Send 100 USDC to @bob privately"',
-                  '"Request 25 DAI from @carol"',
+                  '"Request 25 USDC from @carol"',
                   '"What\'s my balance?"',
                   '"Show my recent transactions"',
                 ].map((cmd, i) => (
