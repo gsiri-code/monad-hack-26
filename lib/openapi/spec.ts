@@ -78,9 +78,35 @@ const MagicLinkVerifyResponse = registry.register(
     }),
     session: z.object({
       accessToken: z.string(),
+      refreshToken: z.string(),
       expiresAt: z.number().int().openapi({ description: "Unix timestamp" }),
     }),
   }),
+);
+
+// ─── Bridge schemas ───────────────────────────────────────────────────────────
+
+const ChatSessionCreateBody = registry.register(
+  "ChatSessionCreateBody",
+  z.object({
+    refreshToken: z.string().min(1).openapi({
+      description: "Refresh token from POST /api/auth/magic/verify",
+    }),
+  }),
+);
+
+const ChatSessionCreateResponse = registry.register(
+  "ChatSessionCreateResponse",
+  z.object({
+    sessionId: Uuid.openapi({
+      description: "Opaque session handle passed to bridgeApiFetch — never contains raw tokens",
+    }),
+  }),
+);
+
+const ChatSessionRevokeResponse = registry.register(
+  "ChatSessionRevokeResponse",
+  z.object({ revoked: z.literal(true) }),
 );
 
 const ProfileObject = registry.register(
@@ -447,6 +473,54 @@ registry.registerPath({
   },
 });
 
+// ─── Bridge routes ────────────────────────────────────────────────────────────
+
+registry.registerPath({
+  method: "post",
+  path: "/api/chat/session",
+  tags: ["Bridge"],
+  summary: "Create bridge session",
+  description:
+    "Exchanges the caller's Bearer token + refresh token for an opaque sessionId. " +
+    "The sessionId is safe to hand to OpenClaw — it never exposes the raw tokens. " +
+    "Use bridgeApiFetch(sessionId, path) on the server to call any auth-gated endpoint on behalf of this user.",
+  security: bearer,
+  request: {
+    body: {
+      required: true,
+      content: { "application/json": { schema: ChatSessionCreateBody } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Session created",
+      content: { "application/json": { schema: ChatSessionCreateResponse } },
+    },
+    ...authErrorResponses(),
+    ...standardErrorResponses(),
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/api/chat/session/{id}",
+  tags: ["Bridge"],
+  summary: "Revoke bridge session",
+  description: "Permanently revokes the session. Subsequent bridgeApiFetch calls with this sessionId will throw BridgeSessionError(\"not_found\"). Only the session owner can revoke.",
+  security: bearer,
+  request: {
+    params: z.object({ id: Uuid }),
+  },
+  responses: {
+    200: {
+      description: "Session revoked",
+      content: { "application/json": { schema: ChatSessionRevokeResponse } },
+    },
+    ...authErrorResponses(),
+    ...standardErrorResponses(),
+  },
+});
+
 // ─── User routes ──────────────────────────────────────────────────────────────
 
 registry.registerPath({
@@ -792,6 +866,7 @@ export function getOpenApiDocument() {
     servers: [{ url: "/" }],
     tags: [
       { name: "Auth" },
+      { name: "Bridge" },
       { name: "Users" },
       { name: "Friendships" },
       { name: "Requests" },
