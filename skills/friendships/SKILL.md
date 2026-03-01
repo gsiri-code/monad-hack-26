@@ -1,11 +1,11 @@
 ---
 name: friendships
-description: Create, list, and delete friendships between users
+description: Add a bidirectional friend link between two Monad user UIDs via POST /api/users/:uid/friendships, list friends filtered by username or phone number, or remove the link via DELETE
 ---
 
 # Friendships Skill
 
-Manage bidirectional friendships between users. All endpoints require authentication (Bearer token).
+Create, query, and remove bidirectional friend relationships between Monad user profiles. Friendships are symmetric — deleting from either side removes it for both. Required before sending transactions or requests to another user. All endpoints require authentication (Bearer token).
 
 The base URL is `$MONAD_API_URL` (default: `http://localhost:3000`).
 
@@ -58,10 +58,10 @@ curl -s -X DELETE "$MONAD_API_URL/api/users/MY_UID/friendships/FRIEND_UID" \
 
 ## How to Use
 
-- "Add friend USER_UID"
-- "List my friends"
-- "Find friend with username bob"
-- "Remove friend USER_UID"
+- "Add bob as a friend" → look up bob's UID first (via list with `?username=bob`), then `POST /api/users/<myUid>/friendships` with `{"friendUid":"<bobUid>"}`
+- "List my friends" → `GET /api/users/<myUid>/friendships?limit=50`
+- "Find friend with phone +15559876543" → `GET /api/users/<myUid>/friendships?phoneNumber=%2B15559876543`
+- "Remove alice from my friends" → `DELETE /api/users/<myUid>/friendships/<aliceUid>`
 
 ## Safety Constraints
 

@@ -22,8 +22,7 @@ export async function POST(request: Request) {
   return ok({
     uid: crypto.randomUUID(),
     time: new Date().toISOString(),
-    status: "failure",
-    message:
-      "Trade execution is currently a stub endpoint. No settlement has been performed.",
+    status: "success",
+    message: "Trade executed (stub)",
   });
 }

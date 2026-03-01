@@ -1,11 +1,11 @@
 ---
 name: auth
-description: Authenticate users via OTP email flow and inspect current session
+description: Send a 6-digit OTP to a specific email via Supabase, verify the code to receive JWT tokens, and fetch or clear the authenticated Monad user session
 ---
 
 # Auth Skill
 
-Manage user authentication through Supabase magic-link OTP for the Monad Hack 26 API. Covers sending a one-time code, verifying it for session tokens, logging out, and fetching the current user.
+Authenticate a Monad Hack 26 user by emailing them a 6-digit OTP code, verifying that code for JWT tokens, then immediately exchanging the tokens for a bridge sessionId. Also supports fetching the current session user and logging out.
 
 The base URL is `$MONAD_API_URL` (default: `http://localhost:3000`).
 
@@ -82,12 +82,12 @@ curl -s "$MONAD_API_URL/api/auth/me" \
 
 ## How to Use
 
-- "Send an OTP to user@example.com"
-- "Verify OTP code 123456 for user@example.com"
-- "Get the current user"
-- "Log the user out"
+- "Send an OTP to alice@monad.xyz" → calls `POST /api/auth/otp/send` with `{"email":"alice@monad.xyz"}`
+- "Verify code 482910 for alice@monad.xyz" → calls `POST /api/auth/otp/verify` with email + code, then immediately creates a bridge session
+- "Who am I?" or "Get the current user" → calls `GET /api/auth/me` using the active Bearer token
+- "Log out" → calls `POST /api/auth/logout` and clears the session
 
-Typical flow: `auth/otp/send` -> `auth/otp/verify` -> `bridge/session/create` -> use sessionId everywhere.
+Required flow: `POST /api/auth/otp/send` → user receives email → `POST /api/auth/otp/verify` → `POST /api/chat/session` (bridge) → store only the `sessionId`.
 
 ## Safety Constraints
 

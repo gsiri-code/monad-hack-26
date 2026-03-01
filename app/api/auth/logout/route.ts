@@ -10,7 +10,7 @@ export async function POST() {
       return internalError(error.message);
     }
 
-    return ok({ message: "Logged out." });
+    return ok({ message: "Logged out" });
   } catch (error) {
     return internalError(error);
   }

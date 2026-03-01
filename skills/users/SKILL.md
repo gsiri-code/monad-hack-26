@@ -1,11 +1,11 @@
 ---
 name: users
-description: Create user profiles and retrieve wallet balances
+description: Create a one-time Monad user profile (username, Monad wallet address, phone, name) via POST /api/users, and query MON token balance via GET /api/users/:uid/wallet
 ---
 
 # Users Skill
 
-Create user profiles and query MON wallet balances. All endpoints require authentication (Bearer token).
+Create the authenticated user's Monad profile row (once per identity) and fetch their MON token balance. Profile creation requires a Monad-compatible wallet address supplied by the user — never fabricate one. All endpoints require authentication (Bearer token).
 
 The base URL is `$MONAD_API_URL` (default: `http://localhost:3000`).
 
@@ -63,8 +63,9 @@ curl -s "$MONAD_API_URL/api/users/USER_UID/wallet" \
 
 ## How to Use
 
-- "Create user profile for alice with wallet 0xabc..."
-- "Check my wallet balance" (needs user uid from auth/me)
+- "Set up my profile — username alice, wallet 0xabc123..., phone +15551234567" → calls `POST /api/users` (fails with `409` if already created)
+- "What's my MON balance?" → calls `GET /api/users/<uid>/wallet` using the uid from `GET /api/auth/me`
+- Profile `uid` comes from `auth/me` response; never guess or hardcode it
 
 ## Safety Constraints
 

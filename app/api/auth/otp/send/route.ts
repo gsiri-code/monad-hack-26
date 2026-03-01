@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       return internalError(error.message);
     }
 
-    return ok({ message: "Magic link sent." });
+    return ok({ message: "OTP sent" });
   } catch (error) {
     return internalError(error);
   }

@@ -1,11 +1,11 @@
 ---
 name: transactions
-description: Execute and query public and private (encrypted) transactions
+description: Send MON tokens publicly (visible amount) via POST /api/public-transaction/execute, or send E2E ECDH-encrypted private transfers via POST /api/private-transactions/execute; also list and fetch private transaction records
 ---
 
 # Transactions Skill
 
-Execute and query public (visible-amount) and private (E2E encrypted) transactions. All endpoints require authentication (Bearer token).
+Send MON token transfers between Monad user wallets. Public transactions expose the amount on-ledger; private transactions require the sender to ECDH-encrypt the payload client-side using the receiver's `encryptionPublicKey` before calling the API — the agent cannot generate ciphertext. All endpoints require authentication (Bearer token).
 
 The base URL is `$MONAD_API_URL` (default: `http://localhost:3000`).
 
@@ -90,10 +90,10 @@ curl -s "$MONAD_API_URL/api/private-transactions/TXN_UID" \
 
 ## How to Use
 
-- "Send 10.5 MON to RECEIVER_UID" (public transaction)
-- "Send encrypted transaction to RECEIVER_UID" (private, needs encryption data)
-- "List my private transactions"
-- "Get transaction TXN_UID"
+- "Send 10.5 MON to alice" → resolve alice's UID from friendships, confirm recipient + amount with user, then `POST /api/public-transaction/execute` with `{"sender":"<myUid>","receiver":"<aliceUid>","amount":"10.5"}`
+- "Send a private payment to bob" → tell the user the agent cannot encrypt; they must provide `ciphertext`, `nonce`, and `senderPublicKeyUsed` from client-side ECDH before calling `POST /api/private-transactions/execute`
+- "Show my private transaction history" → `GET /api/private-transactions?status=success&limit=50`
+- "Look up transaction <txn-uuid>" → `GET /api/private-transactions/<txn-uuid>`
 
 ## Safety Constraints
 

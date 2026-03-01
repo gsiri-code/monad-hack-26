@@ -1,11 +1,11 @@
 ---
 name: requests
-description: Create, list, fetch, and update payment requests between users
+description: Create a MON payment request from one Monad user to another via POST /api/requests, then accept, reject, or cancel it via PATCH /api/requests/:uid; list and filter by status (open|accepted|rejected|cancelled|expired)
 ---
 
 # Requests Skill
 
-Manage payment requests between users. A request lifecycle: `open` -> `accepted` | `rejected` | `cancelled` | `expired`. All endpoints require authentication (Bearer token).
+Create pull-style MON payment requests where the sender asks the receiver to pay. Lifecycle: `open` → `accepted` | `rejected` | `cancelled` | `expired`. Only the sender can cancel; only the receiver can accept or reject. Accepting an `open` request is the prerequisite for running the **trades** skill. All endpoints require authentication (Bearer token).
 
 The base URL is `$MONAD_API_URL` (default: `http://localhost:3000`).
 
@@ -78,11 +78,11 @@ curl -s -X PATCH "$MONAD_API_URL/api/requests/REQUEST_UID" \
 
 ## How to Use
 
-- "Request 25 MON from USER_UID with message 'Lunch'"
-- "List my open requests"
-- "Accept request REQUEST_UID"
-- "Reject request REQUEST_UID"
-- "Cancel request REQUEST_UID"
+- "Ask bob to pay me 25 MON for lunch" → resolve bob's UID, confirm amount + message, then `POST /api/requests` with `{"sender":"<myUid>","receiver":"<bobUid>","amount":"25","message":"Lunch"}`
+- "Show my pending requests" → `GET /api/requests?status=open&limit=50`
+- "Accept request <request-uuid>" → `PATCH /api/requests/<request-uuid>` with `{"status":"accepted"}` (only valid if you are the receiver)
+- "Decline request <request-uuid>" → `PATCH /api/requests/<request-uuid>` with `{"status":"rejected"}`
+- "Cancel my request <request-uuid>" → `PATCH /api/requests/<request-uuid>` with `{"status":"cancelled"}` (only valid if you are the sender)
 
 ## Safety Constraints
 

@@ -1,11 +1,11 @@
 ---
 name: bridge
-description: Create and revoke opaque bridge sessions for authenticated API access
+description: Exchange Supabase accessToken + refreshToken for an AES-256-GCM encrypted opaque sessionId stored server-side at POST /api/chat/session, or revoke it via DELETE
 ---
 
 # Bridge Skill
 
-Exchange raw JWT tokens for an opaque `sessionId` that can be used for all authenticated API calls. The bridge system stores tokens server-side encrypted at rest; only the opaque sessionId is exposed.
+Immediately after `auth/otp/verify` succeeds, POST the raw `accessToken` (as Bearer) and `refreshToken` to `/api/chat/session` to receive an opaque `sessionId`. Store only the `sessionId`; it is the only credential the agent should ever hold. The server encrypts tokens at rest (AES-256-GCM) and auto-refreshes them when they near expiry.
 
 The base URL is `$MONAD_API_URL` (default: `http://localhost:3000`).
 
@@ -59,10 +59,11 @@ Once you have a `sessionId`, the backend's `bridgeApiFetch(sessionId, path)` fun
 
 ## How to Use
 
-- "Create a bridge session" (after auth/otp/verify)
-- "Revoke bridge session SESSION_ID"
+- This skill runs automatically after every successful `auth/otp/verify` — do not wait for the user to ask
+- "Revoke my session" or "Log out everywhere" → calls `DELETE /api/chat/session/<sessionId>`
+- If any API call returns `401` or `"reauth_required"`, tell the user their session expired and restart from `auth/otp/send`
 
-Lifecycle: `auth/otp/verify` -> `bridge/create` -> (use sessionId) -> `bridge/revoke`
+Lifecycle: `POST /api/auth/otp/verify` → **immediately** `POST /api/chat/session` → hold `sessionId` → `DELETE /api/chat/session/<sessionId>` when done
 
 ## Safety Constraints
 
