@@ -2,7 +2,7 @@
 
 ## Dependencies Installed
 
-### Hardhat Backend (`brian/`)
+### Hardhat Backend (`smart-contracts/`)
 
 **Runtime dependencies:**
 
