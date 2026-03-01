@@ -17,6 +17,7 @@
 /.next/
 /out/
 
+.env
 # production
 /build
 
@@ -40,4 +41,21 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+supabase/.temp
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+pip-log.txt
+pip-delete-this-directory.txt
 supabase/.temp
