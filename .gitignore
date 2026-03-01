@@ -20,6 +20,7 @@
 .env
 # production
 /build
+spec.json
 
 # misc
 .DS_Store
@@ -42,6 +43,11 @@ yarn-error.log*
 next-env.d.ts
 
 supabase/.temp
+
+# openclaw agent memory (runtime-generated, may contain user data)
+memory.md
+memory/
+
 # python
 __pycache__/
 *.py[cod]
