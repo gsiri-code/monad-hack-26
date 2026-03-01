@@ -851,6 +851,118 @@ registry.registerPath({
   },
 });
 
+// ─── Telegram / Speech routes ─────────────────────────────────────────────────
+
+const TelegramSendBody = registry.register(
+  "TelegramSendBody",
+  z.object({
+    message: z.string().optional().openapi({
+      description: "Message to send to the bot. Omit to send a random canned message.",
+    }),
+  }),
+);
+
+const TelegramSendResponse = registry.register(
+  "TelegramSendResponse",
+  z.object({ sent: z.string().openapi({ description: "The message that was sent" }) }),
+);
+
+const TelegramStreamEvent = registry.register(
+  "TelegramStreamEvent",
+  z.object({ text: z.string().openapi({ description: "Message text received from the bot" }) }),
+);
+
+const SpeechResponse = registry.register(
+  "SpeechResponse",
+  z.object({
+    transcript: z.string().openapi({ description: "Text transcribed from the audio" }),
+    sent: z.literal(true).openapi({ description: "Transcript was forwarded to the bot" }),
+  }),
+);
+
+registry.registerPath({
+  method: "post",
+  path: "/api/telegram",
+  tags: ["Telegram"],
+  summary: "Send message to bot",
+  description:
+    "Sends a text message to @Zephyr_Zephyr_bot via the MTProto user session. " +
+    "If message is omitted, a random canned string is used.",
+  request: {
+    body: {
+      required: false,
+      content: { "application/json": { schema: TelegramSendBody } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Message sent",
+      content: { "application/json": { schema: TelegramSendResponse } },
+    },
+    ...standardErrorResponses(),
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/telegram/stream",
+  tags: ["Telegram"],
+  summary: "Stream bot replies (SSE)",
+  description:
+    "Opens a Server-Sent Events stream. Each event is a JSON object with a text field " +
+    "containing a message received from @Zephyr_Zephyr_bot. Keep the connection open to " +
+    "receive replies in real time. Close the connection to stop listening.",
+  responses: {
+    200: {
+      description: "SSE stream — each line: `data: {\"text\":\"...\"}\\n\\n`",
+      content: {
+        "text/event-stream": {
+          schema: TelegramStreamEvent,
+        },
+      },
+    },
+    ...standardErrorResponses(),
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/speech",
+  tags: ["Telegram"],
+  summary: "Speech-to-text → send to bot",
+  description:
+    "Accepts a multipart audio file, transcribes it via ElevenLabs Scribe v2, " +
+    "then forwards the transcript to @Zephyr_Zephyr_bot. " +
+    "Pair with GET /api/telegram/stream to receive the bot's reply.",
+  request: {
+    body: {
+      required: true,
+      content: {
+        "multipart/form-data": {
+          schema: z.object({
+            audio: z.instanceof(Blob).openapi({
+              type: "string",
+              format: "binary",
+              description: "Audio file (e.g. .webm, .mp3, .wav)",
+            }),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Transcript produced and forwarded to bot",
+      content: { "application/json": { schema: SpeechResponse } },
+    },
+    422: {
+      description: "No speech detected in audio",
+      content: { "application/json": { schema: ErrorResponse } },
+    },
+    ...standardErrorResponses(),
+  },
+});
+
 // ─── Generator ────────────────────────────────────────────────────────────────
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
@@ -872,6 +984,7 @@ export function getOpenApiDocument() {
       { name: "Requests" },
       { name: "Trades" },
       { name: "Transactions" },
+      { name: "Telegram" },
     ],
   });
 }
