@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import * as usersService from "@/lib/api/services/users";
 import type { CreateUserBody } from "@/types/api";
+import { Button, Input, GridBackground } from "@/components/ui";
 
 export default function OnboardPage() {
   const router = useRouter();
@@ -34,10 +35,9 @@ export default function OnboardPage() {
       if (!body.encryptionPublicKey) delete body.encryptionPublicKey;
       await usersService.createProfile(body);
       await refresh();
-      router.replace("/");
+      router.replace("/messages");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to create profile";
-      setError(msg);
+      setError(err instanceof Error ? err.message : "Failed to create profile");
     } finally {
       setLoading(false);
     }
@@ -53,50 +53,50 @@ export default function OnboardPage() {
   ];
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+    <GridBackground className="flex min-h-[80vh] items-center justify-center px-4">
+      <div className="w-full max-w-lg animate-fade-in">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/25">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="h-7 w-7">
+              <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
             Set up your profile
           </h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
             Complete your profile to start transacting
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {fields.map(({ key, label, required, placeholder }) => (
-            <div key={key}>
-              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                {label}
-                {required && <span className="text-red-500"> *</span>}
-              </label>
-              <input
-                type="text"
-                required={required}
-                value={form[key] ?? ""}
-                onChange={(e) => update(key, e.target.value)}
-                placeholder={placeholder}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500"
-              />
+        <div className="rounded-2xl border border-zinc-200/50 bg-white/60 p-8 shadow-xl shadow-zinc-200/30 backdrop-blur-md dark:border-zinc-800/50 dark:bg-zinc-900/50 dark:shadow-black/20">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {fields.map(({ key, label, required, placeholder }) => (
+                <div key={key} className={key === "walletAddress" || key === "encryptionPublicKey" ? "sm:col-span-2" : ""}>
+                  <Input
+                    label={label}
+                    required={required}
+                    value={form[key] ?? ""}
+                    onChange={(e) => update(key, e.target.value)}
+                    placeholder={placeholder}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {loading ? "Creating..." : "Create Profile"}
-          </button>
-        </form>
+            <Button type="submit" disabled={loading} fullWidth>
+              {loading ? "Creating..." : "Create Profile"}
+            </Button>
+          </form>
 
-        {error && (
-          <p className="text-center text-sm text-red-600 dark:text-red-400">
-            {error}
-          </p>
-        )}
+          {error && (
+            <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-center text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+              {error}
+            </p>
+          )}
+        </div>
       </div>
-    </div>
+    </GridBackground>
   );
 }
