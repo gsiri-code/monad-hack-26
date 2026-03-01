@@ -11,6 +11,8 @@ export async function POST(request: Request) {
   if (bodyResult.response) return bodyResult.response;
   const { body } = bodyResult;
 
+  if (!body.sender && !body.user1) body.sender = user.id;
+
   const { data, error } = buildPublicExecutionRequest(
     body as Parameters<typeof buildPublicExecutionRequest>[0],
   );

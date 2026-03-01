@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   if (bodyResult.response) return bodyResult.response;
   const { body } = bodyResult;
 
-  const sender = (body.sender ?? body.user1)?.trim();
+  const sender = (body.sender ?? body.user1 ?? user.id)?.trim();
   const receiver = (body.receiver ?? body.user2)?.trim();
   const amount = parsePositiveAmount(body.amount);
   const message = body.message?.trim() || null;
