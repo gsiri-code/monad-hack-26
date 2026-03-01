@@ -15,7 +15,7 @@ export interface IUnlinkPool$Type {
   readonly deployedLinkReferences: {};
   readonly immutableReferences: {};
   readonly inputSourceName: "project/contracts/IUnlinkPool.sol";
-  readonly buildInfoId: "solc-0_8_28-1c90508a2e885282d28c566bfacc3a9093622cf4";
+  readonly buildInfoId: "solc-0_8_28-46564788cbb77ef48589926ed66dc05f3e94b41d";
 };
 
 import "hardhat/types/artifacts";

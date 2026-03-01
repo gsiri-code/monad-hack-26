@@ -6,34 +6,29 @@ import { resolve } from "path";
 // Load .env from the repo root (one level above brian/)
 dotenv.config({ path: resolve(import.meta.dirname, "../.env") });
 
+// Note: Counter.t.sol (Foundry tests) lives in test/ so Hardhat won't compile it.
+// Hardhat v3 removed TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS from the public API.
+
 export default defineConfig({
   plugins: [hardhatToolboxMochaEthersPlugin],
   solidity: {
-    profiles: {
-      default: {
-        version: "0.8.28",
-      },
-      production: {
-        version: "0.8.28",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-        },
+    version: "0.8.28",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
       },
     },
   },
   networks: {
-    hardhatMainnet: {
-      type: "edr-simulated",
-      chainType: "l1",
-    },
     monadTestnet: {
       type: "http",
-      chainType: "l1",
       url: "https://testnet-rpc.monad.xyz",
-      accounts: process.env.MONAD_PRIVATE_KEY ? [process.env.MONAD_PRIVATE_KEY] : [],
+      chainId: 10143,
+      accounts: [
+        ...(process.env.MONAD_PRIVATE_KEY ? [process.env.MONAD_PRIVATE_KEY] : []),
+        ...(process.env.SENDER_PRIVATE_KEY ? [process.env.SENDER_PRIVATE_KEY] : []),
+      ].filter(Boolean),
     },
   },
 });
