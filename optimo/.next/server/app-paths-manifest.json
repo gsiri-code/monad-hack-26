@@ -1,10 +1,7 @@
 {
-  "/api/friends/route": "app/api/friends/route.js",
-  "/api/bot/route": "app/api/bot/route.js",
-  "/_not-found/page": "app/_not-found/page.js",
   "/api/social-feed/route": "app/api/social-feed/route.js",
-  "/api/users/route": "app/api/users/route.js",
-  "/dashboard/page": "app/dashboard/page.js",
+  "/api/friends/route": "app/api/friends/route.js",
   "/page": "app/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/onboarding/page": "app/onboarding/page.js"
 }
