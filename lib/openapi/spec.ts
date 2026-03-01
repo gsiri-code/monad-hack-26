@@ -9,6 +9,14 @@ extendZodWithOpenApi(z);
 
 const registry = new OpenAPIRegistry();
 
+registry.registerComponent("securitySchemes", "bearerAuth", {
+  type: "http",
+  scheme: "bearer",
+  bearerFormat: "JWT",
+});
+
+// ─── Shared primitives ────────────────────────────────────────────────────────
+
 const Uuid = z.string().uuid().openapi({
   description: "UUID",
   example: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
@@ -24,6 +32,8 @@ const Amount = z.string().openapi({
   example: "10.5",
 });
 
+// ─── Shared response schemas ──────────────────────────────────────────────────
+
 const ErrorResponse = registry.register(
   "ErrorResponse",
   z.object({ error: z.string() }),
@@ -38,6 +48,65 @@ const ExecutionStatus = registry.register(
   "ExecutionStatus",
   z.enum(["pending", "success", "failure"]),
 );
+
+// ─── Auth schemas ─────────────────────────────────────────────────────────────
+
+const MagicLinkSendBody = registry.register(
+  "MagicLinkSendBody",
+  z.object({ email: z.string().email() }),
+);
+
+const MagicLinkSendResponse = registry.register(
+  "MagicLinkSendResponse",
+  z.object({ message: z.string() }),
+);
+
+const MagicLinkVerifyBody = registry.register(
+  "MagicLinkVerifyBody",
+  z.object({
+    email: z.string().email(),
+    code: z.string().min(1).openapi({ description: "OTP code from email" }),
+  }),
+);
+
+const MagicLinkVerifyResponse = registry.register(
+  "MagicLinkVerifyResponse",
+  z.object({
+    user: z.object({
+      id: Uuid,
+      email: z.string().email().nullable(),
+    }),
+    session: z.object({
+      accessToken: z.string(),
+      expiresAt: z.number().int().openapi({ description: "Unix timestamp" }),
+    }),
+  }),
+);
+
+const ProfileObject = registry.register(
+  "Profile",
+  z.object({
+    uid: Uuid,
+    username: z.string(),
+    walletAddress: z.string(),
+    encryptionPublicKey: z.string().nullable(),
+    phoneNumber: z.string(),
+    firstName: z.string(),
+    lastName: z.string(),
+    email: z.string().email().nullable(),
+  }),
+);
+
+const MeResponse = registry.register(
+  "MeResponse",
+  z.object({
+    id: Uuid,
+    email: z.string().email().nullable(),
+    profile: ProfileObject.nullable(),
+  }),
+);
+
+// ─── User schemas ─────────────────────────────────────────────────────────────
 
 const UserObject = registry.register(
   "User",
@@ -62,8 +131,6 @@ const CreateUserBody = registry.register(
     phoneNumber: z.string().min(1),
     firstName: z.string().min(1),
     lastName: z.string().min(1),
-    email: z.string().email().optional(),
-    password: z.string().min(8),
   }),
 );
 
@@ -71,6 +138,8 @@ const CreateUserResponse = registry.register(
   "CreateUserResponse",
   z.object({ user: UserObject }),
 );
+
+// ─── Friendship schemas ───────────────────────────────────────────────────────
 
 const FriendshipResponse = registry.register(
   "FriendshipResponse",
@@ -114,6 +183,8 @@ const WalletResponse = registry.register(
     ),
   }),
 );
+
+// ─── Request schemas ──────────────────────────────────────────────────────────
 
 const RequestObject = registry.register(
   "Request",
@@ -161,6 +232,8 @@ const PatchRequestBody = registry.register(
     message: z.string().optional().nullable(),
   }),
 );
+
+// ─── Trade / Transaction schemas ──────────────────────────────────────────────
 
 const ExecuteTradeBody = registry.register(
   "ExecuteTradeBody",
@@ -253,6 +326,8 @@ const PrivateTransactionExecuteResponse = registry.register(
   }),
 );
 
+// ─── Response helpers ─────────────────────────────────────────────────────────
+
 function standardErrorResponses() {
   return {
     400: {
@@ -274,14 +349,113 @@ function standardErrorResponses() {
   };
 }
 
+function authErrorResponses() {
+  return {
+    401: {
+      description: "Unauthorized — missing or invalid Bearer token",
+      content: { "application/json": { schema: ErrorResponse } },
+    },
+    403: {
+      description: "Forbidden — authenticated but not allowed to access this resource",
+      content: { "application/json": { schema: ErrorResponse } },
+    },
+  };
+}
+
+const bearer = [{ bearerAuth: [] }];
 const uidPath = z.object({ uid: Uuid });
 const friendshipPath = z.object({ uid: Uuid, friendUid: Uuid });
+
+// ─── Auth routes ──────────────────────────────────────────────────────────────
+
+registry.registerPath({
+  method: "post",
+  path: "/api/auth/magic/send",
+  tags: ["Auth"],
+  summary: "Send magic link / OTP",
+  description: "Sends a one-time code to the given email. Creates the user if they do not exist.",
+  request: {
+    body: {
+      required: true,
+      content: { "application/json": { schema: MagicLinkSendBody } },
+    },
+  },
+  responses: {
+    200: {
+      description: "OTP sent",
+      content: { "application/json": { schema: MagicLinkSendResponse } },
+    },
+    ...standardErrorResponses(),
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/auth/magic/verify",
+  tags: ["Auth"],
+  summary: "Verify OTP code",
+  description: "Verifies the OTP and returns a session access token. Sets a session cookie.",
+  request: {
+    body: {
+      required: true,
+      content: { "application/json": { schema: MagicLinkVerifyBody } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Verified — session created",
+      content: { "application/json": { schema: MagicLinkVerifyResponse } },
+    },
+    ...standardErrorResponses(),
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/api/auth/logout",
+  tags: ["Auth"],
+  summary: "Logout",
+  security: bearer,
+  responses: {
+    200: {
+      description: "Logged out",
+      content: {
+        "application/json": {
+          schema: z.object({ message: z.string() }),
+        },
+      },
+    },
+    ...authErrorResponses(),
+    ...standardErrorResponses(),
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/auth/me",
+  tags: ["Auth"],
+  summary: "Get current user",
+  description: "Returns the authenticated user and their profile row, if created.",
+  security: bearer,
+  responses: {
+    200: {
+      description: "Current user",
+      content: { "application/json": { schema: MeResponse } },
+    },
+    ...authErrorResponses(),
+    ...standardErrorResponses(),
+  },
+});
+
+// ─── User routes ──────────────────────────────────────────────────────────────
 
 registry.registerPath({
   method: "post",
   path: "/api/users",
   tags: ["Users"],
-  summary: "Create user",
+  summary: "Create user profile",
+  description: "Creates the profile row linked to the authenticated user's identity. Call once after first verify.",
+  security: bearer,
   request: {
     body: {
       content: { "application/json": { schema: CreateUserBody } },
@@ -293,6 +467,7 @@ registry.registerPath({
       description: "User created",
       content: { "application/json": { schema: CreateUserResponse } },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
@@ -301,22 +476,29 @@ registry.registerPath({
   method: "get",
   path: "/api/users/{uid}/wallet",
   tags: ["Users"],
-  summary: "Get wallet balances for user",
+  summary: "Get wallet balances",
+  description: "Returns MON balance for the authenticated user. uid must match the caller.",
+  security: bearer,
   request: { params: uidPath },
   responses: {
     200: {
       description: "Wallet balances",
       content: { "application/json": { schema: WalletResponse } },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
+
+// ─── Friendship routes ────────────────────────────────────────────────────────
 
 registry.registerPath({
   method: "post",
   path: "/api/users/{uid}/friendships",
   tags: ["Friendships"],
   summary: "Create friendship",
+  description: "uid must match the authenticated user.",
+  security: bearer,
   request: {
     params: uidPath,
     body: {
@@ -331,6 +513,7 @@ registry.registerPath({
       description: "Friendship created",
       content: { "application/json": { schema: FriendshipResponse } },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
@@ -339,7 +522,9 @@ registry.registerPath({
   method: "get",
   path: "/api/users/{uid}/friendships",
   tags: ["Friendships"],
-  summary: "List friendships for user",
+  summary: "List friendships",
+  description: "uid must match the authenticated user.",
+  security: bearer,
   request: {
     params: uidPath,
     query: z.object({
@@ -353,6 +538,7 @@ registry.registerPath({
       description: "Friendship list",
       content: { "application/json": { schema: ListFriendshipsResponse } },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
@@ -362,21 +548,28 @@ registry.registerPath({
   path: "/api/users/{uid}/friendships/{friendUid}",
   tags: ["Friendships"],
   summary: "Delete friendship",
+  description: "uid must match the authenticated user.",
+  security: bearer,
   request: { params: friendshipPath },
   responses: {
     200: {
       description: "Friendship deleted",
       content: { "application/json": { schema: FriendshipResponse } },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
+
+// ─── Request routes ───────────────────────────────────────────────────────────
 
 registry.registerPath({
   method: "post",
   path: "/api/requests",
   tags: ["Requests"],
   summary: "Create request",
+  description: "sender must match the authenticated user.",
+  security: bearer,
   request: {
     body: {
       required: true,
@@ -388,6 +581,7 @@ registry.registerPath({
       description: "Request created",
       content: { "application/json": { schema: CreateRequestResponse } },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
@@ -397,6 +591,8 @@ registry.registerPath({
   path: "/api/requests",
   tags: ["Requests"],
   summary: "List requests",
+  description: "Results are scoped to requests where the authenticated user is sender or receiver.",
+  security: bearer,
   request: {
     query: z.object({
       sender: Uuid.optional(),
@@ -410,6 +606,7 @@ registry.registerPath({
       description: "Request list",
       content: { "application/json": { schema: ListRequestsResponse } },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
@@ -419,12 +616,15 @@ registry.registerPath({
   path: "/api/requests/{uid}",
   tags: ["Requests"],
   summary: "Get request by uid",
+  description: "Authenticated user must be the sender or receiver.",
+  security: bearer,
   request: { params: uidPath },
   responses: {
     200: {
       description: "Request",
       content: { "application/json": { schema: RequestObject } },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
@@ -434,6 +634,8 @@ registry.registerPath({
   path: "/api/requests/{uid}",
   tags: ["Requests"],
   summary: "Update request status",
+  description: "Authenticated user must be the sender or receiver.",
+  security: bearer,
   request: {
     params: uidPath,
     body: {
@@ -446,17 +648,20 @@ registry.registerPath({
       description: "Updated request",
       content: { "application/json": { schema: RequestObject } },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
+
+// ─── Trade routes ─────────────────────────────────────────────────────────────
 
 registry.registerPath({
   method: "post",
   path: "/api/trades/execute",
   tags: ["Trades"],
   summary: "Execute trade (stub)",
-  description:
-    "Stub endpoint. Validates input and returns a non-settling response.",
+  description: "Stub endpoint. Validates input and returns a non-settling response.",
+  security: bearer,
   request: {
     body: {
       required: true,
@@ -468,15 +673,20 @@ registry.registerPath({
       description: "Trade execution response",
       content: { "application/json": { schema: ExecuteTradeResponse } },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
+
+// ─── Transaction routes ───────────────────────────────────────────────────────
 
 registry.registerPath({
   method: "post",
   path: "/api/public-transaction/execute",
   tags: ["Transactions"],
   summary: "Execute public transaction",
+  description: "sender must match the authenticated user.",
+  security: bearer,
   request: {
     body: {
       required: true,
@@ -490,6 +700,7 @@ registry.registerPath({
         "application/json": { schema: PublicTransactionExecuteResponse },
       },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
@@ -499,6 +710,8 @@ registry.registerPath({
   path: "/api/private-transactions/execute",
   tags: ["Transactions"],
   summary: "Execute private transaction",
+  description: "sender must match the authenticated user.",
+  security: bearer,
   request: {
     body: {
       required: true,
@@ -514,6 +727,7 @@ registry.registerPath({
         "application/json": { schema: PrivateTransactionExecuteResponse },
       },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
@@ -523,13 +737,12 @@ registry.registerPath({
   path: "/api/private-transactions",
   tags: ["Transactions"],
   summary: "List private transactions",
-  description:
-    "At least one of sender, receiver, or user is required by runtime validation.",
+  description: "Results are scoped to transactions where the authenticated user is sender or receiver.",
+  security: bearer,
   request: {
     query: z.object({
       sender: Uuid.optional(),
       receiver: Uuid.optional(),
-      user: Uuid.optional(),
       status: ExecutionStatus.optional(),
       limit: z.coerce.number().int().min(1).max(200).optional(),
     }),
@@ -541,6 +754,7 @@ registry.registerPath({
         "application/json": { schema: PrivateTransactionsListResponse },
       },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
@@ -550,20 +764,20 @@ registry.registerPath({
   path: "/api/private-transactions/{uid}",
   tags: ["Transactions"],
   summary: "Get private transaction",
-  request: {
-    params: uidPath,
-    query: z.object({
-      user: Uuid.optional(),
-    }),
-  },
+  description: "Authenticated user must be the sender or receiver.",
+  security: bearer,
+  request: { params: uidPath },
   responses: {
     200: {
       description: "Private transaction",
       content: { "application/json": { schema: PrivateTransaction } },
     },
+    ...authErrorResponses(),
     ...standardErrorResponses(),
   },
 });
+
+// ─── Generator ────────────────────────────────────────────────────────────────
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -577,6 +791,7 @@ export function getOpenApiDocument() {
     },
     servers: [{ url: "/" }],
     tags: [
+      { name: "Auth" },
       { name: "Users" },
       { name: "Friendships" },
       { name: "Requests" },

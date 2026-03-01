@@ -1,21 +1,27 @@
-import { badRequest, internalError, notFound, ok } from "@/lib/api/http";
-import { canonicalFriendPair, isUuid } from "@/lib/api/friendships";
+import { badRequest, forbidden, internalError, notFound, ok, requireUid, unauthorized } from "@/lib/api/http";
+import { canonicalFriendPair } from "@/lib/api/friendships";
+import { getAuthUser } from "@/lib/db/auth-server";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type RouteParams = {
   params: Promise<{ uid: string; friendUid: string }>;
 };
 
-export async function DELETE(_: Request, { params }: RouteParams) {
-  const { uid, friendUid } = await params;
+export async function DELETE(request: Request, { params }: RouteParams) {
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
-  if (!uid || !friendUid) {
-    return badRequest("uid and friendUid are required.");
-  }
+  const { uid: uidParam, friendUid: friendUidParam } = await params;
 
-  if (!isUuid(uid) || !isUuid(friendUid)) {
-    return badRequest("uid and friendUid must be valid UUIDs.");
-  }
+  const uidResult = requireUid(uidParam);
+  if (uidResult.response) return uidResult.response;
+  const { uid } = uidResult;
+
+  if (user.id !== uid) return forbidden("Access denied.");
+
+  const friendUidResult = requireUid(friendUidParam, "friendUid");
+  if (friendUidResult.response) return friendUidResult.response;
+  const { uid: friendUid } = friendUidResult;
 
   if (uid === friendUid) {
     return badRequest("uid and friendUid must be different users.");
@@ -50,7 +56,6 @@ export async function DELETE(_: Request, { params }: RouteParams) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : undefined;
-    return internalError(message);
+    return internalError(error);
   }
 }

@@ -1,9 +1,16 @@
 import {
-  badRequest,
+  forbidden,
   internalError,
   notFound,
   ok,
+  requireUid,
+  unauthorized,
 } from "@/lib/api/http";
+import {
+  toPrivateTxResponse,
+  type PrivateTransactionRow,
+} from "@/lib/api/execution";
+import { getAuthUser } from "@/lib/db/auth-server";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type RouteParams = {
@@ -11,12 +18,12 @@ type RouteParams = {
 };
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const { uid } = await params;
-  const user = new URL(request.url).searchParams.get("user")?.trim() ?? null;
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
-  if (!uid) {
-    return badRequest("uid is required.");
-  }
+  const uidResult = requireUid((await params).uid);
+  if (uidResult.response) return uidResult.response;
+  const { uid } = uidResult;
 
   try {
     const supabase = getSupabaseAdminClient();
@@ -34,22 +41,13 @@ export async function GET(request: Request, { params }: RouteParams) {
       return notFound("private transaction not found.");
     }
 
-    if (user && data.sender !== user && data.receiver !== user) {
-      return notFound("private transaction not found.");
+    const row = data as PrivateTransactionRow;
+    if (row.sender !== user.id && row.receiver !== user.id) {
+      return forbidden("Access denied.");
     }
 
-    return ok({
-      uid: data.uid,
-      sender: data.sender,
-      receiver: data.receiver,
-      ciphertext: data.ciphertext,
-      nonce: data.nonce,
-      senderPublicKeyUsed: data.sender_pubkey_used,
-      timestamp: data.ts,
-      status: data.status,
-    });
+    return ok(toPrivateTxResponse(row));
   } catch (error) {
-    const message = error instanceof Error ? error.message : undefined;
-    return internalError(message);
+    return internalError(error);
   }
 }

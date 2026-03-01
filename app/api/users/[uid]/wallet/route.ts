@@ -1,16 +1,20 @@
-import { badRequest, internalError, ok } from "@/lib/api/http";
+import { forbidden, internalError, ok, requireUid, unauthorized } from "@/lib/api/http";
+import { getAuthUser } from "@/lib/db/auth-server";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type RouteParams = {
   params: Promise<{ uid: string }>;
 };
 
-export async function GET(_: Request, { params }: RouteParams) {
-  const { uid } = await params;
+export async function GET(request: Request, { params }: RouteParams) {
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
-  if (!uid) {
-    return badRequest("uid is required.");
-  }
+  const uidResult = requireUid((await params).uid);
+  if (uidResult.response) return uidResult.response;
+  const { uid } = uidResult;
+
+  if (user.id !== uid) return forbidden("Access denied.");
 
   try {
     const supabase = getSupabaseAdminClient();
@@ -51,7 +55,6 @@ export async function GET(_: Request, { params }: RouteParams) {
       wallet: [{ currencyName: "MON", amount: netBalance }],
     });
   } catch (error) {
-    const messageText = error instanceof Error ? error.message : undefined;
-    return internalError(messageText);
+    return internalError(error);
   }
 }

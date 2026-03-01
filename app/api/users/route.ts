@@ -1,5 +1,5 @@
-import { badRequest, conflict, created, internalError, isUniqueViolation } from "@/lib/api/http";
-import argon2 from "argon2";
+import { badRequest, conflict, created, internalError, isUniqueViolation, parseJsonBody, unauthorized } from "@/lib/api/http";
+import { getAuthUser } from "@/lib/db/auth-server";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type CreateUserBody = {
@@ -9,18 +9,15 @@ type CreateUserBody = {
   phoneNumber?: string;
   firstName?: string;
   lastName?: string;
-  email?: string;
-  password?: string;
 };
 
 export async function POST(request: Request) {
-  let body: CreateUserBody;
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest("Request body must be valid JSON.");
-  }
+  const bodyResult = await parseJsonBody<CreateUserBody>(request);
+  if (bodyResult.response) return bodyResult.response;
+  const { body } = bodyResult;
 
   const username = body.username?.trim();
   const walletAddress = body.walletAddress?.trim();
@@ -28,43 +25,27 @@ export async function POST(request: Request) {
   const phoneNumber = body.phoneNumber?.trim();
   const firstName = body.firstName?.trim();
   const lastName = body.lastName?.trim();
-  const email = body.email?.trim().toLowerCase() || null;
-  const password = body.password;
 
-  if (
-    !username ||
-    !walletAddress ||
-    !phoneNumber ||
-    !firstName ||
-    !lastName ||
-    !password
-  ) {
+  if (!username || !walletAddress || !phoneNumber || !firstName || !lastName) {
     return badRequest(
-      "username, walletAddress, phoneNumber, firstName, lastName and password are required.",
+      "username, walletAddress, phoneNumber, firstName and lastName are required.",
     );
-  }
-
-  if (password.length < 8) {
-    return badRequest("password must be at least 8 characters long.");
   }
 
   try {
     const supabase = getSupabaseAdminClient();
-    const passwordHash = await argon2.hash(password, {
-      type: argon2.argon2id,
-    });
 
     const { data, error } = await supabase
       .from("users")
       .insert({
+        uid: user.id,
         username,
         wallet_address: walletAddress,
         encryption_public_key: encryptionPublicKey,
         phone_number: phoneNumber,
         first_name: firstName,
         last_name: lastName,
-        email,
-        password_hash: passwordHash,
+        email: user.email ?? null,
       })
       .select(
         "uid, username, wallet_address, encryption_public_key, phone_number, first_name, last_name, email",
@@ -93,7 +74,6 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : undefined;
-    return internalError(message);
+    return internalError(error);
   }
 }

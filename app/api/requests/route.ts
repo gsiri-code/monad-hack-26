@@ -1,4 +1,4 @@
-import { badRequest, created, internalError, ok } from "@/lib/api/http";
+import { badRequest, created, forbidden, internalError, ok, parseJsonBody, unauthorized } from "@/lib/api/http";
 import {
   isRequestStatus,
   parseLimit,
@@ -6,6 +6,7 @@ import {
   toRequestResponse,
   type RequestRow,
 } from "@/lib/api/requests";
+import { getAuthUser } from "@/lib/db/auth-server";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 
 type CreateRequestBody = {
@@ -18,13 +19,12 @@ type CreateRequestBody = {
 };
 
 export async function POST(request: Request) {
-  let body: CreateRequestBody;
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
 
-  try {
-    body = await request.json();
-  } catch {
-    return badRequest("Request body must be valid JSON.");
-  }
+  const bodyResult = await parseJsonBody<CreateRequestBody>(request);
+  if (bodyResult.response) return bodyResult.response;
+  const { body } = bodyResult;
 
   const sender = (body.sender ?? body.user1)?.trim();
   const receiver = (body.receiver ?? body.user2)?.trim();
@@ -34,6 +34,8 @@ export async function POST(request: Request) {
   if (!sender || !receiver || !amount) {
     return badRequest("sender, receiver and amount are required.");
   }
+
+  if (user.id !== sender) return forbidden("Access denied.");
 
   if (sender === receiver) {
     return badRequest("sender and receiver must be different users.");
@@ -64,12 +66,14 @@ export async function POST(request: Request) {
       status: data.status,
     });
   } catch (error) {
-    const messageText = error instanceof Error ? error.message : undefined;
-    return internalError(messageText);
+    return internalError(error);
   }
 }
 
 export async function GET(request: Request) {
+  const user = await getAuthUser(request);
+  if (!user) return unauthorized();
+
   const url = new URL(request.url);
   const sender = url.searchParams.get("sender")?.trim() ?? null;
   const receiver = url.searchParams.get("receiver")?.trim() ?? null;
@@ -89,7 +93,8 @@ export async function GET(request: Request) {
       .from("requests")
       .select("uid, sender, receiver, amount, ts, status, message")
       .order("ts", { ascending: false })
-      .limit(limit);
+      .limit(limit)
+      .or(`sender.eq.${user.id},receiver.eq.${user.id}`);
 
     if (sender) {
       query = query.eq("sender", sender);
@@ -113,7 +118,6 @@ export async function GET(request: Request) {
       requests: (data as RequestRow[]).map(toRequestResponse),
     });
   } catch (error) {
-    const messageText = error instanceof Error ? error.message : undefined;
-    return internalError(messageText);
+    return internalError(error);
   }
 }

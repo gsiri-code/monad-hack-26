@@ -166,3 +166,27 @@ function normalizeNonEmptyString(value: unknown) {
   const trimmed = value.trim();
   return trimmed || null;
 }
+
+export type PrivateTransactionRow = {
+  uid: string;
+  sender: string;
+  receiver: string;
+  ciphertext: string;
+  nonce: string;
+  sender_pubkey_used: string;
+  ts: string;
+  status: ExecutionStatus;
+};
+
+export function toPrivateTxResponse(row: PrivateTransactionRow) {
+  return {
+    uid: row.uid,
+    sender: row.sender,
+    receiver: row.receiver,
+    ciphertext: row.ciphertext,
+    nonce: row.nonce,
+    senderPublicKeyUsed: row.sender_pubkey_used,
+    timestamp: row.ts,
+    status: row.status,
+  };
+}
