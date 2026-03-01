@@ -1,8 +1,8 @@
-# optimo/ — Benmo Full-Stack App
+# optimo/ — Benmo Full-Stack App + Smart Contracts
 
 ## What Is This
 
-`optimo/` is the full-stack Next.js 15 web application for Benmo — a privacy-preserving payment app built on Monad Testnet using the Unlink SDK. It pairs with the existing `smart-contracts/` Hardhat project which hosts the `Web3VenmoShield` contract.
+`optimo/` is a combined Hardhat + Next.js 15 project for Benmo — a privacy-preserving payment app built on Monad Testnet using the Unlink SDK. It contains both the on-chain smart contracts and the full-stack web layer in a single directory.
 
 The core privacy guarantee: **amounts are never stored, logged, or displayed**. Users see who paid whom and what for — never how much. Transaction values are mathematically shielded on-chain via Unlink's zero-knowledge proof system.
 
@@ -12,6 +12,9 @@ The core privacy guarantee: **amounts are never stored, logged, or displayed**. 
 
 | Layer | Technology |
 |---|---|
+| Smart Contracts | Solidity 0.8.28, Hardhat v3 |
+| Contract Testing | Mocha, Chai, Ethers.js v6 |
+| Contract Deployment | Hardhat Ignition |
 | Framework | Next.js 15 (App Router) |
 | UI | React 19, Tailwind CSS v4 |
 | Blockchain (client) | `@unlink-xyz/react` |
@@ -20,7 +23,7 @@ The core privacy guarantee: **amounts are never stored, logged, or displayed**. 
 | Chain | Monad Testnet (Chain ID: 10143) |
 | Type safety | TypeScript (ES2020 target) |
 
-**Note:** Ethers.js v6 is included as a dependency. Viem is deliberately excluded.
+**Note:** Ethers.js v6 is used everywhere. Viem is deliberately excluded.
 
 ---
 
@@ -28,10 +31,21 @@ The core privacy guarantee: **amounts are never stored, logged, or displayed**. 
 
 ```
 optimo/
-├── package.json                     # Dependencies (no viem)
+├── package.json                     # All deps: Next.js + Hardhat (no viem)
 ├── tsconfig.json                    # ES2020 target (required for BigInt literals)
-├── next.config.ts                   # Loads .env from repo root
+├── hardhat.config.ts                # Hardhat v3, Monad Testnet, loads .env from repo root
+├── next.config.ts                   # Next.js, loads .env from repo root
 ├── postcss.config.mjs               # Tailwind v4 PostCSS
+│
+├── contracts/                       # Solidity smart contracts
+│   └── BenmoRegistry.sol            # On-chain handle → Unlink address registry
+│
+├── test/                            # Hardhat tests (Mocha + Ethers.js v6)
+│   └── BenmoRegistry.ts             # 6 tests: registration, resolution, revert cases
+│
+├── ignition/
+│   └── modules/
+│       └── BenmoRegistry.ts         # Hardhat Ignition deployment module
 │
 ├── app/
 │   ├── globals.css                  # @import "tailwindcss"
@@ -40,7 +54,7 @@ optimo/
 │   ├── page.tsx                     # Landing page: links to /onboarding and /dashboard
 │   │
 │   ├── onboarding/
-│   │   └── page.tsx                 # Wallet creation flow (see Step 3)
+│   │   └── page.tsx                 # Wallet creation flow
 │   │
 │   ├── dashboard/
 │   │   ├── page.tsx                 # Main dashboard layout
@@ -64,6 +78,70 @@ optimo/
 └── supabase/
     └── schema.sql                   # DDL: users, friends, social_feed tables
 ```
+
+---
+
+## Smart Contracts
+
+### `BenmoRegistry.sol`
+
+An on-chain username registry that maps human-readable handles to Unlink bech32m addresses. This lets users pay each other by name (e.g. `@alice`) instead of raw `unlink1...` addresses. The frontend can call `resolveHandle()` to look up the recipient's Unlink address before calling `useSend()`.
+
+```solidity
+contract BenmoRegistry {
+    mapping(bytes32 => string) private handleToUnlinkAddress;
+    mapping(address => bytes32) private ownerToHandle;
+
+    event HandleRegistered(bytes32 indexed handleHash, address indexed owner);
+
+    function registerHandle(string calldata handle, string calldata unlinkAddress) external;
+    function resolveHandle(string calldata handle) external view returns (string memory);
+}
+```
+
+**Design decisions:**
+- Handle uniqueness enforced via `keccak256` hash — no enumeration of registered handles is possible
+- One wallet, one handle — `ownerToHandle[msg.sender]` prevents squatting multiple names
+- `handleToUnlinkAddress` is `private` — balances and Unlink addresses are not indexable on-chain
+- The `HandleRegistered` event indexes only the handle hash and owner address, not the Unlink address itself
+
+**Revert conditions:**
+- `"Handle already registered"` — if another wallet has claimed the same handle
+- `"Wallet already registered a handle"` — if the caller already owns a handle
+- `"Handle not found"` — if `resolveHandle()` is called for an unregistered handle
+
+### Tests (`test/BenmoRegistry.ts`)
+
+6 tests, all passing. Uses Hardhat v3 syntax throughout.
+
+| Test | What it checks |
+|---|---|
+| Register and resolve | `resolveHandle("alice")` returns the registered Unlink address |
+| Event emission | `HandleRegistered` emits with correct `keccak256(handle)` hash and `owner` address |
+| Duplicate handle revert | Second wallet trying the same handle reverts |
+| Duplicate wallet revert | Same wallet trying a second handle reverts |
+| Unknown handle revert | `resolveHandle("unknown")` reverts with "Handle not found" |
+| Multi-user resolution | Two different users can each register and resolve independently |
+
+**Key pattern:** Revert assertions use `.to.be.revert(ethers)` — Hardhat v3 syntax. `.to.be.reverted` is deprecated and will throw.
+
+```bash
+# Run tests
+cd optimo
+npx hardhat test test/BenmoRegistry.ts
+
+# Deploy to Monad Testnet
+npx hardhat ignition deploy ignition/modules/BenmoRegistry.ts --network monadTestnet
+```
+
+### Relationship Between Contracts
+
+| Contract | Location | Purpose |
+|---|---|---|
+| `Web3VenmoShield` | `smart-contracts/contracts/` | Pulls ERC-20 → deposits to Unlink pool → emits `SocialPayment` |
+| `BenmoRegistry` | `optimo/contracts/` | Maps `@handle` → `unlink1...` address for human-readable payments |
+
+`BenmoRegistry` is a prerequisite for UX — the frontend resolves handles to Unlink addresses before calling `Web3VenmoShield.shieldAndPay()` or the Unlink SDK's `send()`.
 
 ---
 
@@ -331,10 +409,21 @@ POST https://your-app.vercel.app/api/bot
 
 ## Relationship to `smart-contracts/`
 
-The `optimo/` app does **not** call `Web3VenmoShield.sol` directly. The contract exists for use cases where you need on-chain composability (e.g., a DeFi protocol triggering a payment). The web app uses the Unlink SDK directly:
+The `optimo/` app uses the Unlink SDK directly for payments, not `Web3VenmoShield.sol`. The full picture:
 
-- **Frontend payments:** `useSend()` hook → Unlink ZK transfer
-- **Bot payments:** `unlink.send()` server-side → Unlink ZK transfer
-- **Social metadata:** both paths → `POST /api/social-feed` → Supabase
+```
+User types "@alice"
+  └─ resolveHandle("alice") on BenmoRegistry      (optimo/contracts/)
+       └─ returns "unlink1..."
+            └─ send([{ token, recipient, amount }])   (Unlink SDK / useSend())
+                 └─ ZK private transfer on-chain
+                      └─ POST /api/social-feed         (no amount stored)
+                           └─ Supabase social_feed table
+```
 
-The `SocialPayment(sender, receiver, memo)` event from the contract and the `social_feed` table rows share the same privacy model: sender, receiver, memo are visible — amount is never recorded.
+- **`BenmoRegistry`** (optimo) — resolves human-readable handles to Unlink addresses before payment
+- **`Web3VenmoShield`** (smart-contracts) — composability layer for ERC-20 shielding; emits `SocialPayment(sender, receiver, memo)` with no amount
+- **Unlink SDK** — executes the actual ZK private transfer; amount is never exposed publicly
+- **Supabase** — stores only social metadata (sender, receiver, memo); amount is discarded at the API layer
+
+Both contracts share the same privacy model: amounts are never recorded on-chain in readable form or in the database.
