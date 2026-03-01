@@ -19,7 +19,7 @@ const FEATURE_PILLS = [
   "Instant Settlement",
   "NLP-Powered",
   "Telegram Integration",
-  "Zero Fees",
+  "Near-Zero Fees",
   "Monad Native",
   "Sub-Second Finality",
   "10,000+ TPS",
@@ -52,7 +52,7 @@ const STATS = [
     label: "Network Fee",
     value: 0,
     suffix: "",
-    prefix: "$",
+    prefix: "~$",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-amber-500">
         <path d="M10.464 8.746c.227-.18.497-.311.786-.394v2.795a2.252 2.252 0 0 1-.786-.393c-.394-.313-.546-.681-.546-1.004 0-.323.152-.691.546-1.004ZM12.75 15.662v-2.824c.347.085.664.228.921.421.427.32.579.686.579.991 0 .305-.152.671-.579.991a2.534 2.534 0 0 1-.921.42Z" />
@@ -272,8 +272,8 @@ export default function LandingPage() {
           />
 
           <BentoCard
-            title="Zero Fees"
-            description="No hidden charges. What you send is exactly what they receive."
+            title="Near-Zero Fees"
+            description="Negligible gas costs on Monad. What you send is virtually what they receive."
             gradient="from-amber-500 to-orange-500"
             icon={
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="h-6 w-6">
