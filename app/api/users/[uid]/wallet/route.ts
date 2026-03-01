@@ -69,13 +69,27 @@ export async function GET(request: Request, { params }: RouteParams) {
       try {
         const token = getShieldTokenAddress();
         const readContract = getReadContract();
+
+        // Shielded balance: tokens inside the pool tracked by the contract
         const shieldedWei: bigint = await readContract.balanceOf(token, userData.wallet_address);
         wallet.push({
           currencyName: "MON (Shielded)",
           amount: ethers.formatEther(shieldedWei),
         });
+
+        // Wallet balance: raw ERC-20 tokens in the user's EOA (cashed-out or received directly)
+        const erc20 = new ethers.Contract(
+          token,
+          ["function balanceOf(address) view returns (uint256)"],
+          readContract.runner,
+        );
+        const walletWei: bigint = await erc20.balanceOf(userData.wallet_address);
+        wallet.push({
+          currencyName: "MON (Wallet)",
+          amount: ethers.formatEther(walletWei),
+        });
       } catch {
-        // Non-fatal: shielded balance unavailable (env not configured or RPC error)
+        // Non-fatal: on-chain balances unavailable (env not configured or RPC error)
       }
     }
 

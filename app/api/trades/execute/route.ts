@@ -52,13 +52,14 @@ export async function POST(request: Request) {
     if (!senderUser?.wallet_address) return badRequest("Sender wallet address not found.");
     if (!receiverUser?.wallet_address) return badRequest("Receiver wallet address not found.");
 
-    // 3. Call unshieldAndPay on-chain as owner
+    // 3. Call shieldedTransfer on-chain as owner — moves internal balance,
+    //    no tokens leave the pool, no visible on-chain transfer.
     const token = getShieldTokenAddress();
-    const amountWei = ethers.parseEther(req.amount);
+    const amountWei = ethers.parseEther(String(req.amount));
     const memo = req.message ?? "";
 
     const contract = getContract();
-    const tx = await contract.unshieldAndPay(
+    const tx = await contract.shieldedTransfer(
       senderUser.wallet_address,
       token,
       amountWei,

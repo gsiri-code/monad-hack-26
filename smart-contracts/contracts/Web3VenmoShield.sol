@@ -75,6 +75,22 @@ contract Web3VenmoShield {
         emit SocialPayment(user, receiver, memo);
     }
 
+    /// @notice Private payment: moves balance internally without touching the pool.
+    ///         No tokens leave the contract — only the internal accounting changes.
+    ///         `SocialPayment` is emitted with no amount for privacy.
+    function shieldedTransfer(
+        address from,
+        address token,
+        uint256 amount,
+        address to,
+        string calldata memo
+    ) external onlyOwner {
+        require(userBalances[token][from] >= amount, "Insufficient balance");
+        userBalances[token][from] -= amount;
+        userBalances[token][to] += amount;
+        emit SocialPayment(from, to, memo);
+    }
+
     /// @notice Total tokens this contract has shielded in the Unlink pool
     function totalShielded(address token) external view returns (uint256) {
         return unlinkPool.balanceOf(token, address(this));

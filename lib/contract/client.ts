@@ -27,6 +27,19 @@ const ABI = [
     outputs: [],
   },
   {
+    name: "shieldedTransfer",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "from", type: "address" },
+      { name: "token", type: "address" },
+      { name: "amount", type: "uint256" },
+      { name: "to", type: "address" },
+      { name: "memo", type: "string" },
+    ],
+    outputs: [],
+  },
+  {
     name: "balanceOf",
     type: "function",
     stateMutability: "view",
@@ -79,7 +92,7 @@ const ABI = [
 const RPC_URL = process.env.MONAD_RPC_URL ?? "https://testnet-rpc.monad.xyz";
 const CONTRACT_ADDRESS =
   process.env.SHIELD_CONTRACT_ADDRESS ??
-  "0xf9a83f9322113C6fe84Ed6EFE8affB0b57fB39ac";
+  "0x6EB88764301f6a70fb34b194A32a053712982F81";
 
 let _provider: ethers.JsonRpcProvider | null = null;
 let _contract: ethers.Contract | null = null;

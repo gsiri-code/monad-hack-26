@@ -6,13 +6,14 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface Web3VenmoShieldInterface extends Interface {
-    getFunction(nameOrSignature: "balanceOf" | "owner" | "shieldAndPay" | "totalShielded" | "transferOwnership" | "unlinkPool" | "unshieldAndPay" | "userBalances"): FunctionFragment;
+    getFunction(nameOrSignature: "balanceOf" | "owner" | "shieldAndPay" | "shieldedTransfer" | "totalShielded" | "transferOwnership" | "unlinkPool" | "unshieldAndPay" | "userBalances"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "Deposited" | "OwnerTransferred" | "SocialPayment" | "Withdrawn"): EventFragment;
 
     encodeFunctionData(functionFragment: 'balanceOf', values: [AddressLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'shieldAndPay', values: [AddressLike, BigNumberish, AddressLike, string]): string;
+encodeFunctionData(functionFragment: 'shieldedTransfer', values: [AddressLike, AddressLike, BigNumberish, AddressLike, string]): string;
 encodeFunctionData(functionFragment: 'totalShielded', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'unlinkPool', values?: undefined): string;
@@ -22,6 +23,7 @@ encodeFunctionData(functionFragment: 'userBalances', values: [AddressLike, Addre
     decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'shieldAndPay', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'shieldedTransfer', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'totalShielded', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'unlinkPool', data: BytesLike): Result;
@@ -136,6 +138,14 @@ decodeFunctionResult(functionFragment: 'userBalances', data: BytesLike): Result;
     
 
     
+    shieldedTransfer: TypedContractMethod<
+      [from: AddressLike, token: AddressLike, amount: BigNumberish, to: AddressLike, memo: string, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     totalShielded: TypedContractMethod<
       [token: AddressLike, ],
       [bigint],
@@ -190,6 +200,11 @@ getFunction(nameOrSignature: 'owner'): TypedContractMethod<
     >;
 getFunction(nameOrSignature: 'shieldAndPay'): TypedContractMethod<
       [token: AddressLike, amount: BigNumberish, receiver: AddressLike, memo: string, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'shieldedTransfer'): TypedContractMethod<
+      [from: AddressLike, token: AddressLike, amount: BigNumberish, to: AddressLike, memo: string, ],
       [void],
       'nonpayable'
     >;

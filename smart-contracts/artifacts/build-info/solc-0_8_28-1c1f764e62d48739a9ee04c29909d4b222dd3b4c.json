@@ -1,14 +1,10 @@
 {
   "_format": "hh3-sol-build-info-1",
-  "id": "solc-0_8_28-aa53a3184f7dc90c51126c6d7b6119888d3dbb42",
+  "id": "solc-0_8_28-1c1f764e62d48739a9ee04c29909d4b222dd3b4c",
   "solcVersion": "0.8.28",
   "solcLongVersion": "0.8.28+commit.7893614a",
   "userSourceNameMap": {
-    "contracts/Counter.sol": "project/contracts/Counter.sol",
-    "contracts/IUnlinkPool.sol": "project/contracts/IUnlinkPool.sol",
-    "contracts/mocks/MockERC20.sol": "project/contracts/mocks/MockERC20.sol",
-    "contracts/mocks/MockUnlinkPool.sol": "project/contracts/mocks/MockUnlinkPool.sol",
-    "contracts/Web3VenmoShield.sol": "project/contracts/Web3VenmoShield.sol"
+    "contracts/mocks/MockERC20.sol": "project/contracts/mocks/MockERC20.sol"
   },
   "input": {
     "language": "Solidity",
@@ -33,8 +29,6 @@
         }
       },
       "remappings": [
-        "project/:@openzeppelin/contracts/=npm/@openzeppelin/contracts@5.6.1/",
-        "project/:@openzeppelin/contracts/=npm/@openzeppelin/contracts@5.6.1/",
         "project/:@openzeppelin/contracts/=npm/@openzeppelin/contracts@5.6.1/"
       ]
     },
@@ -54,20 +48,8 @@
       "npm/@openzeppelin/contracts@5.6.1/utils/Context.sol": {
         "content": "// SPDX-License-Identifier: MIT\n// OpenZeppelin Contracts (last updated v5.0.1) (utils/Context.sol)\n\npragma solidity ^0.8.20;\n\n/**\n * @dev Provides information about the current execution context, including the\n * sender of the transaction and its data. While these are generally available\n * via msg.sender and msg.data, they should not be accessed in such a direct\n * manner, since when dealing with meta-transactions the account sending and\n * paying for execution may not be the actual sender (as far as an application\n * is concerned).\n *\n * This contract is only required for intermediate, library-like contracts.\n */\nabstract contract Context {\n    function _msgSender() internal view virtual returns (address) {\n        return msg.sender;\n    }\n\n    function _msgData() internal view virtual returns (bytes calldata) {\n        return msg.data;\n    }\n\n    function _contextSuffixLength() internal view virtual returns (uint256) {\n        return 0;\n    }\n}\n"
       },
-      "project/contracts/Counter.sol": {
-        "content": "// SPDX-License-Identifier: UNLICENSED\npragma solidity ^0.8.28;\n\ncontract Counter {\n  uint public x;\n\n  event Increment(uint by);\n\n  function inc() public {\n    x++;\n    emit Increment(1);\n  }\n\n  function incBy(uint by) public {\n    require(by > 0, \"incBy: increment should be positive\");\n    x += by;\n    emit Increment(by);\n  }\n}\n"
-      },
-      "project/contracts/IUnlinkPool.sol": {
-        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\ninterface IUnlinkPool {\n    function deposit(address token, uint256 amount) external;\n    function withdraw(address token, uint256 amount, address recipient) external;\n    function balanceOf(address token, address account) external view returns (uint256);\n}\n"
-      },
       "project/contracts/mocks/MockERC20.sol": {
         "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\nimport {ERC20} from \"@openzeppelin/contracts/token/ERC20/ERC20.sol\";\n\ncontract MockERC20 is ERC20 {\n    constructor(string memory name, string memory symbol, uint256 initialSupply) ERC20(name, symbol) {\n        _mint(msg.sender, initialSupply);\n    }\n}\n"
-      },
-      "project/contracts/mocks/MockUnlinkPool.sol": {
-        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\nimport {IERC20} from \"@openzeppelin/contracts/token/ERC20/IERC20.sol\";\nimport {IUnlinkPool} from \"../IUnlinkPool.sol\";\n\ncontract MockUnlinkPool is IUnlinkPool {\n    // token => account => shielded balance\n    mapping(address => mapping(address => uint256)) public shieldedBalances;\n\n    function deposit(address token, uint256 amount) external override {\n        IERC20(token).transferFrom(msg.sender, address(this), amount);\n        shieldedBalances[token][msg.sender] += amount;\n    }\n\n    function withdraw(address token, uint256 amount, address recipient) external override {\n        require(shieldedBalances[token][msg.sender] >= amount, \"Insufficient shielded balance\");\n        shieldedBalances[token][msg.sender] -= amount;\n        IERC20(token).transfer(recipient, amount);\n    }\n\n    function balanceOf(address token, address account) external view override returns (uint256) {\n        return shieldedBalances[token][account];\n    }\n}\n"
-      },
-      "project/contracts/Web3VenmoShield.sol": {
-        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\nimport {IERC20} from \"@openzeppelin/contracts/token/ERC20/IERC20.sol\";\nimport {IUnlinkPool} from \"./IUnlinkPool.sol\";\n\ncontract Web3VenmoShield {\n    IUnlinkPool public immutable unlinkPool;\n\n    event SocialPayment(\n        address indexed sender,\n        address indexed receiver,\n        string memo\n    );\n\n    constructor(address _unlinkPool) {\n        unlinkPool = IUnlinkPool(_unlinkPool);\n    }\n\n    /// @notice Wallet → Unlink: pull tokens from sender, deposit into shielded pool\n    /// @param token ERC-20 token address\n    /// @param amount Amount to shield\n    /// @param receiver Intended recipient (for event only — privacy handled by Unlink)\n    /// @param memo Human-readable memo (e.g., \"dinner split\")\n    function shieldAndPay(\n        address token,\n        uint256 amount,\n        address receiver,\n        string calldata memo\n    ) external {\n        IERC20(token).transferFrom(msg.sender, address(this), amount);\n        IERC20(token).approve(address(unlinkPool), amount);\n        unlinkPool.deposit(token, amount);\n\n        emit SocialPayment(msg.sender, receiver, memo);\n    }\n\n    /// @notice Unlink → Wallet: withdraw tokens from shielded pool to a recipient\n    /// @param token ERC-20 token address\n    /// @param amount Amount to unshield\n    /// @param receiver Address that receives the tokens on-chain\n    /// @param memo Human-readable memo (e.g., \"cash out\")\n    function unshieldAndPay(\n        address token,\n        uint256 amount,\n        address receiver,\n        string calldata memo\n    ) external {\n        unlinkPool.withdraw(token, amount, receiver);\n\n        emit SocialPayment(msg.sender, receiver, memo);\n    }\n\n    /// @notice Check how many tokens this contract has shielded in the Unlink pool\n    function shieldedBalance(address token) external view returns (uint256) {\n        return unlinkPool.balanceOf(token, address(this));\n    }\n}\n"
       }
     }
   }
