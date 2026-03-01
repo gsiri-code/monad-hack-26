@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-df7b91b4ed7db0ea6075da49ea03a3fb00557e55",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/IUnlinkPool.sol": "project/contracts/IUnlinkPool.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/IUnlinkPool.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\ninterface IUnlinkPool {\n    function deposit(address token, uint256 amount) external;\n    function withdraw(\n        address token,\n        uint256 amount,\n        address recipient\n    ) external;\n    function balanceOf(\n        address token,\n        address account\n    ) external view returns (uint256);\n}\n"
+      }
+    }
+  }
+}

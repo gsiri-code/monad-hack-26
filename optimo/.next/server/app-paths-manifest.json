@@ -1,0 +1,7 @@
+{
+  "/api/social-feed/route": "app/api/social-feed/route.js",
+  "/api/friends/route": "app/api/friends/route.js",
+  "/page": "app/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/onboarding/page": "app/onboarding/page.js"
+}
