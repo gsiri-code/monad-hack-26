@@ -1,23 +1,29 @@
 ---
 name: friendships
-description: Add a bidirectional friend link between two Monad user UIDs via POST /api/users/:uid/friendships, list friends filtered by username or phone number, or remove the link via DELETE
+description: Create, list, and delete friendships between users
 ---
 
 # Friendships Skill
 
-Create, query, and remove bidirectional friend relationships between Monad user profiles. Friendships are symmetric — deleting from either side removes it for both. Required before sending transactions or requests to another user. All endpoints require authentication (Bearer token).
+Manage bidirectional friendships between users.
 
 The base URL is `$MONAD_API_URL` (default: `http://localhost:3000`).
+
+> **All calls must go through the bridge proxy** — use `POST $MONAD_API_URL/api/chat/proxy` with your `sessionId`. Never use a raw Bearer token.
 
 ## Endpoints
 
 ### 1. Create Friendship
 
 ```bash
-curl -s -X POST "$MONAD_API_URL/api/users/MY_UID/friendships" \
-  -H "Authorization: Bearer ACCESS_TOKEN" \
+curl -s -X POST "$MONAD_API_URL/api/chat/proxy" \
   -H "Content-Type: application/json" \
-  -d '{"friendUid": "TARGET_USER_UID"}'
+  -d '{
+    "sessionId": "SESSION_ID",
+    "path": "/api/users/MY_UID/friendships",
+    "method": "POST",
+    "body": {"friendUid": "TARGET_USER_UID"}
+  }'
 ```
 
 **Response** (`201`):
@@ -30,8 +36,9 @@ curl -s -X POST "$MONAD_API_URL/api/users/MY_UID/friendships" \
 ### 2. List Friendships
 
 ```bash
-curl -s "$MONAD_API_URL/api/users/MY_UID/friendships?limit=50" \
-  -H "Authorization: Bearer ACCESS_TOKEN"
+curl -s -X POST "$MONAD_API_URL/api/chat/proxy" \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId":"SESSION_ID","path":"/api/users/MY_UID/friendships?limit=50","method":"GET"}'
 ```
 
 Optional query params: `username`, `phoneNumber`, `limit` (1-200).
@@ -50,21 +57,23 @@ Optional query params: `username`, `phoneNumber`, `limit` (1-200).
 ### 3. Delete Friendship
 
 ```bash
-curl -s -X DELETE "$MONAD_API_URL/api/users/MY_UID/friendships/FRIEND_UID" \
-  -H "Authorization: Bearer ACCESS_TOKEN"
+curl -s -X POST "$MONAD_API_URL/api/chat/proxy" \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId":"SESSION_ID","path":"/api/users/MY_UID/friendships/FRIEND_UID","method":"DELETE"}'
 ```
 
 **Response** (`200`): returns the deleted friendship object.
 
 ## How to Use
 
-- "Add bob as a friend" → look up bob's UID first (via list with `?username=bob`), then `POST /api/users/<myUid>/friendships` with `{"friendUid":"<bobUid>"}`
-- "List my friends" → `GET /api/users/<myUid>/friendships?limit=50`
-- "Find friend with phone +15559876543" → `GET /api/users/<myUid>/friendships?phoneNumber=%2B15559876543`
-- "Remove alice from my friends" → `DELETE /api/users/<myUid>/friendships/<aliceUid>`
+- "Add friend USER_UID"
+- "List my friends"
+- "Find friend with username bob"
+- "Remove friend USER_UID"
 
 ## Safety Constraints
 
 - `MY_UID` must be the authenticated user's profile uid (`403` otherwise).
 - Friendships are symmetric: deleting from either side removes for both.
 - `409` on create = already friends; `404` on delete = not friends.
+- If the proxy returns `401 reauth_required`, guide the user through re-auth. Do NOT re-auth for any other reason.

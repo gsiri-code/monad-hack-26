@@ -1,13 +1,15 @@
 ---
 name: requests
-description: Create a MON payment request from one Monad user to another via POST /api/requests, then accept, reject, or cancel it via PATCH /api/requests/:uid; list and filter by status (open|accepted|rejected|cancelled|expired)
+description: Create, list, fetch, and update payment requests between users
 ---
 
 # Requests Skill
 
-Create pull-style MON payment requests where the sender asks the receiver to pay. Lifecycle: `open` → `accepted` | `rejected` | `cancelled` | `expired`. Only the sender can cancel; only the receiver can accept or reject. Accepting an `open` request is the prerequisite for running the **trades** skill. All endpoints require authentication (Bearer token).
+Manage payment requests between users. Lifecycle: `open` → `accepted` | `rejected` | `cancelled` | `expired`.
 
 The base URL is `$MONAD_API_URL` (default: `http://localhost:3000`).
+
+> **All calls must go through the bridge proxy** — use `POST $MONAD_API_URL/api/chat/proxy` with your `sessionId`. Never use a raw Bearer token.
 
 ## Status Lifecycle
 
@@ -24,10 +26,14 @@ The base URL is `$MONAD_API_URL` (default: `http://localhost:3000`).
 ### 1. Create Request
 
 ```bash
-curl -s -X POST "$MONAD_API_URL/api/requests" \
-  -H "Authorization: Bearer ACCESS_TOKEN" \
+curl -s -X POST "$MONAD_API_URL/api/chat/proxy" \
   -H "Content-Type: application/json" \
-  -d '{"sender":"SENDER_UID","receiver":"RECEIVER_UID","amount":"25.5","message":"Lunch money"}'
+  -d '{
+    "sessionId": "SESSION_ID",
+    "path": "/api/requests",
+    "method": "POST",
+    "body": {"sender":"SENDER_UID","receiver":"RECEIVER_UID","amount":"25.5","message":"Lunch money"}
+  }'
 ```
 
 | Field    | Type             | Required | Notes |
@@ -37,15 +43,14 @@ curl -s -X POST "$MONAD_API_URL/api/requests" \
 | amount   | number or string | yes      | Must be > 0 |
 | message  | string or null   | no       | Optional memo |
 
-*Either `sender`/`receiver` or `user1`/`user2` pair required.
-
 **Response** (`201`): `{"uid": "request-uuid", "time": "ISO-8601", "status": "open"}`
 
 ### 2. List Requests
 
 ```bash
-curl -s "$MONAD_API_URL/api/requests?status=open&limit=50" \
-  -H "Authorization: Bearer ACCESS_TOKEN"
+curl -s -X POST "$MONAD_API_URL/api/chat/proxy" \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId":"SESSION_ID","path":"/api/requests?status=open&limit=50","method":"GET"}'
 ```
 
 Query params: `sender`, `receiver`, `status` (open|accepted|rejected|cancelled|expired), `limit` (1-200).
@@ -58,17 +63,22 @@ Query params: `sender`, `receiver`, `status` (open|accepted|rejected|cancelled|e
 ### 3. Get Request
 
 ```bash
-curl -s "$MONAD_API_URL/api/requests/REQUEST_UID" \
-  -H "Authorization: Bearer ACCESS_TOKEN"
+curl -s -X POST "$MONAD_API_URL/api/chat/proxy" \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId":"SESSION_ID","path":"/api/requests/REQUEST_UID","method":"GET"}'
 ```
 
 ### 4. Update Request Status
 
 ```bash
-curl -s -X PATCH "$MONAD_API_URL/api/requests/REQUEST_UID" \
-  -H "Authorization: Bearer ACCESS_TOKEN" \
+curl -s -X POST "$MONAD_API_URL/api/chat/proxy" \
   -H "Content-Type: application/json" \
-  -d '{"status":"accepted"}'
+  -d '{
+    "sessionId": "SESSION_ID",
+    "path": "/api/requests/REQUEST_UID",
+    "method": "PATCH",
+    "body": {"status":"accepted"}
+  }'
 ```
 
 | Field   | Type   | Required | Values |
@@ -78,11 +88,11 @@ curl -s -X PATCH "$MONAD_API_URL/api/requests/REQUEST_UID" \
 
 ## How to Use
 
-- "Ask bob to pay me 25 MON for lunch" → resolve bob's UID, confirm amount + message, then `POST /api/requests` with `{"sender":"<myUid>","receiver":"<bobUid>","amount":"25","message":"Lunch"}`
-- "Show my pending requests" → `GET /api/requests?status=open&limit=50`
-- "Accept request <request-uuid>" → `PATCH /api/requests/<request-uuid>` with `{"status":"accepted"}` (only valid if you are the receiver)
-- "Decline request <request-uuid>" → `PATCH /api/requests/<request-uuid>` with `{"status":"rejected"}`
-- "Cancel my request <request-uuid>" → `PATCH /api/requests/<request-uuid>` with `{"status":"cancelled"}` (only valid if you are the sender)
+- "Request 25 MON from USER_UID with message 'Lunch'"
+- "List my open requests"
+- "Accept request REQUEST_UID"
+- "Reject request REQUEST_UID"
+- "Cancel request REQUEST_UID"
 
 ## Safety Constraints
 
@@ -90,3 +100,4 @@ curl -s -X PATCH "$MONAD_API_URL/api/requests/REQUEST_UID" \
 - Only the sender can cancel; only the receiver can accept/reject.
 - Amounts must be > 0 and are decimal strings.
 - Confirm request details with the user before creating or accepting.
+- If the proxy returns `401 reauth_required`, guide the user through re-auth. Do NOT re-auth for any other reason.
