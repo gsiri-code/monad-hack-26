@@ -5,6 +5,8 @@ const PUBLIC_API_PATHS = new Set([
   "/api/openapi.json",
   "/api/auth/magic/send",
   "/api/auth/magic/verify",
+  "/api/telegram",
+  "/api/telegram/stream",
 ]);
 
 export async function middleware(request: NextRequest) {
