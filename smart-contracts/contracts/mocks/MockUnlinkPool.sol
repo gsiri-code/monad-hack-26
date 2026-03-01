@@ -13,7 +13,23 @@ contract MockUnlinkPool is IUnlinkPool {
         shieldedBalances[token][msg.sender] += amount;
     }
 
-    function balanceOf(address token, address account) external view override returns (uint256) {
+    function withdraw(
+        address token,
+        uint256 amount,
+        address recipient
+    ) external override {
+        require(
+            shieldedBalances[token][msg.sender] >= amount,
+            "Insufficient shielded balance"
+        );
+        shieldedBalances[token][msg.sender] -= amount;
+        IERC20(token).transfer(recipient, amount);
+    }
+
+    function balanceOf(
+        address token,
+        address account
+    ) external view override returns (uint256) {
         return shieldedBalances[token][account];
     }
 }
