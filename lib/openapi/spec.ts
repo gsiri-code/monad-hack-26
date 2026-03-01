@@ -396,10 +396,10 @@ const friendshipPath = z.object({ uid: Uuid, friendUid: Uuid });
 
 registry.registerPath({
   method: "post",
-  path: "/api/auth/magic/send",
+  path: "/api/auth/otp/send",
   tags: ["Auth"],
-  summary: "Send magic link / OTP",
-  description: "Sends a one-time code to the given email. Creates the user if they do not exist.",
+  summary: "Send OTP",
+  description: "Sends a 6-digit one-time code to the given email. Creates the Supabase auth user if they do not exist.",
   request: {
     body: {
       required: true,
@@ -417,10 +417,10 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/api/auth/magic/verify",
+  path: "/api/auth/otp/verify",
   tags: ["Auth"],
   summary: "Verify OTP code",
-  description: "Verifies the OTP and returns a session access token. Sets a session cookie.",
+  description: "Verifies the 6-digit OTP code and returns access + refresh tokens.",
   request: {
     body: {
       required: true,

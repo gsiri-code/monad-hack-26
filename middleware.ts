@@ -3,8 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_API_PATHS = new Set([
   "/api/openapi.json",
-  "/api/auth/magic/send",
-  "/api/auth/magic/verify",
+  "/api/auth/otp/send",
+  "/api/auth/otp/verify",
   "/api/telegram",
   "/api/telegram/stream",
   "/api/bridge-test", // DEV ONLY — remove before prod
