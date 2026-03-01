@@ -1,51 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendToBot } from "@/lib/telegram-client";
 
-// POST /api/speech
-// Body: multipart/form-data with field "audio" (audio file)
-// Flow: audio → ElevenLabs STT → transcript → send to bot
 export async function POST(req: NextRequest) {
+  const form = await req.formData().catch(() => null);
+
+  if (!form) {
+    return NextResponse.json({ error: "Invalid multipart form data." }, { status: 400 });
+  }
+
+  const audio = form.get("audio");
+
+  if (!audio || !(audio instanceof Blob)) {
+    return NextResponse.json({ error: "audio field is required." }, { status: 400 });
+  }
+
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: "Speech transcription is not configured." }, { status: 500 });
+  }
+
   try {
-    const apiKey = process.env.ELEVENLABS_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "Missing ELEVENLABS_API_KEY in env" }, { status: 500 });
-    }
+    // Call ElevenLabs Scribe v2
+    const elForm = new FormData();
+    elForm.append("audio", audio, (audio as File).name ?? "audio.webm");
+    elForm.append("model_id", "scribe_v2");
 
-    const formData = await req.formData();
-    const audio = formData.get("audio");
-
-    if (!audio || !(audio instanceof Blob)) {
-      return NextResponse.json({ error: "audio field is required" }, { status: 400 });
-    }
-
-    // Step 1: Send audio to ElevenLabs STT
-    const sttForm = new FormData();
-    sttForm.append("file", audio, "audio.webm");
-    sttForm.append("model_id", "scribe_v2");
-
-    const sttRes = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+    const elRes = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
       method: "POST",
       headers: { "xi-api-key": apiKey },
-      body: sttForm,
+      body: elForm,
     });
 
-    if (!sttRes.ok) {
-      const err = await sttRes.text();
-      return NextResponse.json({ error: `ElevenLabs error: ${err}` }, { status: sttRes.status });
+    if (!elRes.ok) {
+      const errBody = await elRes.text().catch(() => "");
+      console.error("ElevenLabs error:", elRes.status, errBody);
+      return NextResponse.json({ error: "Transcription failed." }, { status: 500 });
     }
 
-    const sttData = await sttRes.json();
-    const transcript: string = sttData.text?.trim();
+    const { text } = await elRes.json();
 
-    if (!transcript) {
-      return NextResponse.json({ error: "No speech detected" }, { status: 422 });
+    if (!text?.trim()) {
+      return NextResponse.json({ error: "No speech detected in audio." }, { status: 422 });
     }
 
-    // Step 2: Forward transcript to bot
+    const transcript = text.trim();
     await sendToBot(transcript);
 
     return NextResponse.json({ transcript, sent: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
