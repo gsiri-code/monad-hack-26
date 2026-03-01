@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import * as friendshipsService from "@/lib/api/services/friendships";
-import type { FriendshipListItem } from "@/types/api";
+import * as usersService from "@/lib/api/services/users";
+import type { FriendshipListItem, WalletBalance } from "@/types/api";
 import { Button, CardSpotlight, Input, Skeleton } from "@/components/ui";
 
 export default function ProfilePage() {
@@ -17,6 +18,7 @@ export default function ProfilePage() {
   const [addError, setAddError] = useState("");
   const [addLoading, setAddLoading] = useState(false);
   const [walletCopied, setWalletCopied] = useState(false);
+  const [wallet, setWallet] = useState<WalletBalance[]>([]);
 
   const loadFriends = useCallback(async () => {
     if (!profile) return;
@@ -36,6 +38,13 @@ export default function ProfilePage() {
   useEffect(() => {
     loadFriends();
   }, [loadFriends]);
+
+  useEffect(() => {
+    if (!profile) return;
+    usersService.getWallet(profile.uid)
+      .then((res) => setWallet(res.wallet))
+      .catch(() => {});
+  }, [profile]);
 
   async function handleAddFriend(e: React.FormEvent) {
     e.preventDefault();
@@ -130,6 +139,20 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
+
+              {wallet.length > 0 && (
+                <div className="mt-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 px-3 py-2.5 dark:from-amber-950/30 dark:to-orange-950/30">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                    Balance
+                  </p>
+                  {wallet.map((b) => (
+                    <div key={b.currencyName} className="flex items-baseline justify-between">
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">{b.currencyName}</span>
+                      <span className="font-mono text-sm font-bold text-zinc-900 dark:text-zinc-100">{b.amount}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

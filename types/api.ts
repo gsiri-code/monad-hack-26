@@ -33,6 +33,7 @@ export interface MagicLinkVerifyResponse {
   };
   session: {
     accessToken: string;
+    refreshToken: string;
     expiresAt: number;
   };
 }

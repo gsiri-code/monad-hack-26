@@ -9,7 +9,7 @@ import type {
 
 export async function sendOtp(email: string) {
   const { data } = await apiClient.post<MagicLinkSendResponse>(
-    "/auth/magic/send",
+    "/auth/otp/send",
     { email } satisfies MagicLinkSendBody,
   );
   return data;
@@ -17,7 +17,7 @@ export async function sendOtp(email: string) {
 
 export async function verifyOtp(email: string, code: string) {
   const { data } = await apiClient.post<MagicLinkVerifyResponse>(
-    "/auth/magic/verify",
+    "/auth/otp/verify",
     { email, code } satisfies MagicLinkVerifyBody,
   );
   return data;

@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import * as requestsService from "@/lib/api/services/requests";
 
 const NAV_ITEMS = [
   { href: "/messages", label: "Messages", icon: MessagesIcon },
@@ -12,6 +15,16 @@ const NAV_ITEMS = [
 
 export default function SideNav() {
   const pathname = usePathname();
+  const { profile } = useAuth();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (!profile) return;
+    requestsService
+      .listRequests({ receiver: profile.uid, status: "open" })
+      .then((res) => setPendingCount(res.requests.length))
+      .catch(() => {});
+  }, [profile]);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r border-zinc-200/30 bg-white/50 backdrop-blur-xl lg:flex dark:border-zinc-800/30 dark:bg-zinc-900/30">
@@ -47,9 +60,9 @@ export default function SideNav() {
               )}
               <Icon active={active} />
               <span>{label}</span>
-              {label === "Activity" && (
+              {label === "Activity" && pendingCount > 0 && (
                 <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
-                  3
+                  {pendingCount}
                 </span>
               )}
             </Link>
