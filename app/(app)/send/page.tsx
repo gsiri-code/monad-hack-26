@@ -9,6 +9,7 @@ import type {
   PublicTransactionExecuteResponse,
   PrivateTransactionExecuteResponse,
 } from "@/types/api";
+import { Button, CardSpotlight, Input, Select, TabBar, Textarea } from "@/components/ui";
 
 type TxMode = "public" | "private";
 type Step = "form" | "confirm" | "result";
@@ -27,7 +28,6 @@ export default function SendPage() {
     PublicTransactionExecuteResponse | PrivateTransactionExecuteResponse | null
   >(null);
 
-  // Private tx fields
   const [ciphertext, setCiphertext] = useState("");
   const [nonce, setNonce] = useState("");
   const [senderPubkey, setSenderPubkey] = useState("");
@@ -92,70 +92,55 @@ export default function SendPage() {
   if (!profile) return null;
 
   if (step === "result" && result) {
+    const isSuccess = result.status === "success";
     return (
-      <div className="mx-auto flex max-w-lg flex-col items-center gap-6 px-4 pt-16 text-center">
-        <div className={`flex h-16 w-16 items-center justify-center rounded-full ${result.status === "success" ? "bg-green-100 dark:bg-green-900/40" : result.status === "pending" ? "bg-yellow-100 dark:bg-yellow-900/40" : "bg-red-100 dark:bg-red-900/40"}`}>
-          {result.status === "success" ? (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-8 w-8 text-green-600 dark:text-green-400">
-              <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-            </svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-8 w-8 text-yellow-600 dark:text-yellow-400">
-              <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 0 1 .67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 1 1-.671-1.34l.041-.022ZM12 9a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clipRule="evenodd" />
-            </svg>
-          )}
+      <div className="flex min-h-[60vh] items-center justify-center px-4 animate-fade-in">
+        <div className="flex flex-col items-center gap-6 text-center">
+          <div className={`relative flex h-20 w-20 items-center justify-center rounded-3xl ${isSuccess ? "bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/30 dark:to-green-900/30" : "bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30"}`}>
+            {isSuccess ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-10 w-10 text-emerald-500">
+                <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-10 w-10 text-amber-500">
+                <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 0 1 .67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 1 1-.671-1.34l.041-.022ZM12 9a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clipRule="evenodd" />
+              </svg>
+            )}
+            <div className={`absolute -inset-2 -z-10 rounded-[2rem] blur-xl ${isSuccess ? "bg-emerald-200/30 dark:bg-emerald-500/10" : "bg-amber-200/30 dark:bg-amber-500/10"}`} />
+          </div>
+          <h2 className="text-xl font-extrabold capitalize text-zinc-900 dark:text-zinc-50">
+            {result.status}
+          </h2>
+          <p className="text-sm text-zinc-400">
+            Transaction {result.uid.slice(0, 8)}... ({result.type})
+          </p>
+          <Button onClick={reset}>Send another</Button>
         </div>
-        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 capitalize">
-          {result.status}
-        </h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Transaction {result.uid.slice(0, 8)}... ({result.type})
-        </p>
-        <button
-          onClick={reset}
-          className="rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
-        >
-          Send another
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 pt-8">
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
-        Send Money
-      </h1>
-
-      {/* Mode toggle */}
-      <div className="flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
-        {(["public", "private"] as TxMode[]).map((m) => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium capitalize transition-colors ${
-              mode === m
-                ? "bg-white text-zinc-900 shadow dark:bg-zinc-700 dark:text-zinc-100"
-                : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400"
-            }`}
-          >
-            {m}
-          </button>
-        ))}
+    <div className="px-4 pt-6 pb-8 lg:px-8 lg:pt-10 animate-fade-in">
+      <div className="mb-8">
+        <h1 className="mb-1 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+          Send Money
+        </h1>
+        <p className="text-sm text-zinc-400 dark:text-zinc-500">Transfer funds securely</p>
       </div>
 
-      {step === "form" ? (
-        <div className="space-y-4">
-          {/* Recipient from friends */}
-          {friends.length > 0 && (
-            <div>
-              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Select friend
-              </label>
-              <select
+      <div className="max-w-lg">
+        <div className="mb-6">
+          <TabBar tabs={["public", "private"] as const} active={mode} onChange={setMode} />
+        </div>
+
+        {step === "form" ? (
+          <div className="space-y-4">
+            {friends.length > 0 && (
+              <Select
+                label="Select friend"
                 value={receiverUid}
                 onChange={(e) => setReceiverUid(e.target.value)}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
               >
                 <option value="">Choose a recipient...</option>
                 {friends.map((f) => (
@@ -163,161 +148,72 @@ export default function SendPage() {
                     @{f.friend.username} ({f.friend.walletAddress.slice(0, 10)}...)
                   </option>
                 ))}
-              </select>
-            </div>
-          )}
+              </Select>
+            )}
 
-          {/* Or enter UID */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Receiver UID
-            </label>
-            <input
-              type="text"
-              value={receiverUid}
-              onChange={(e) => setReceiverUid(e.target.value)}
-              placeholder="Paste UUID"
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500"
-            />
+            <Input label="Receiver UID" value={receiverUid} onChange={(e) => setReceiverUid(e.target.value)} placeholder="Paste UUID" />
+
+            {mode === "public" ? (
+              <>
+                <Input label="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
+                <Input label="Message (optional)" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="What's it for?" />
+              </>
+            ) : (
+              <>
+                <Textarea label="Ciphertext" value={ciphertext} onChange={(e) => setCiphertext(e.target.value)} placeholder="Encrypted payload" rows={3} />
+                <Input label="Nonce" value={nonce} onChange={(e) => setNonce(e.target.value)} placeholder="Nonce" />
+                <Input label="Sender public key" value={senderPubkey} onChange={(e) => setSenderPubkey(e.target.value)} placeholder="Your public key" />
+              </>
+            )}
+
+            <Button onClick={() => setStep("confirm")} disabled={!receiverUid || (mode === "public" && !amount)} fullWidth>
+              Review
+            </Button>
           </div>
-
-          {mode === "public" ? (
-            <>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Amount
-                </label>
-                <input
-                  type="text"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Message (optional)
-                </label>
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="What's it for?"
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500"
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Ciphertext
-                </label>
-                <textarea
-                  value={ciphertext}
-                  onChange={(e) => setCiphertext(e.target.value)}
-                  placeholder="Encrypted payload"
-                  rows={3}
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Nonce
-                </label>
-                <input
-                  type="text"
-                  value={nonce}
-                  onChange={(e) => setNonce(e.target.value)}
-                  placeholder="Nonce"
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Sender public key
-                </label>
-                <input
-                  type="text"
-                  value={senderPubkey}
-                  onChange={(e) => setSenderPubkey(e.target.value)}
-                  placeholder="Your public key"
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500"
-                />
-              </div>
-            </>
-          )}
-
-          <button
-            onClick={() => setStep("confirm")}
-            disabled={!receiverUid || (mode === "public" && !amount)}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
-          >
-            Review
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-            <h3 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Confirm {mode} transaction
-            </h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-zinc-500">To</span>
-                <span className="truncate text-zinc-900 dark:text-zinc-100">
-                  {receiverUid.slice(0, 16)}...
-                </span>
-              </div>
-              {mode === "public" && (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Amount</span>
-                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                      {amount}
-                    </span>
-                  </div>
-                  {message && (
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Message</span>
-                      <span className="text-zinc-900 dark:text-zinc-100">
-                        {message}
-                      </span>
-                    </div>
+        ) : (
+          <div className="space-y-4 animate-slide-up">
+            <CardSpotlight>
+              <div className="p-5">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  Confirm {mode} transaction
+                </h3>
+                <div className="space-y-2.5 text-sm">
+                  <ConfirmRow label="To" value={`${receiverUid.slice(0, 16)}...`} />
+                  {mode === "public" && (
+                    <>
+                      <ConfirmRow label="Amount" value={amount} bold />
+                      {message && <ConfirmRow label="Message" value={message} />}
+                    </>
                   )}
-                </>
-              )}
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Type</span>
-                <span className="capitalize text-zinc-900 dark:text-zinc-100">
-                  {mode}
-                </span>
+                  <ConfirmRow label="Type" value={mode} />
+                </div>
               </div>
+            </CardSpotlight>
+
+            {error && (
+              <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">{error}</p>
+            )}
+
+            <div className="flex gap-3">
+              <Button variant="secondary" onClick={() => setStep("form")} className="flex-1">Back</Button>
+              <Button onClick={handleSend} disabled={loading} className="flex-1">
+                {loading ? "Sending..." : "Confirm & Send"}
+              </Button>
             </div>
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
-          {error && (
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          )}
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => setStep("form")}
-              className="flex-1 rounded-lg border border-zinc-300 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-            >
-              Back
-            </button>
-            <button
-              onClick={handleSend}
-              disabled={loading}
-              className="flex-1 rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {loading ? "Sending..." : "Confirm & Send"}
-            </button>
-          </div>
-        </div>
-      )}
+function ConfirmRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div className="flex justify-between rounded-xl bg-zinc-50/80 px-3 py-2 dark:bg-zinc-800/40">
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">{label}</span>
+      <span className={`text-sm ${bold ? "font-bold text-zinc-900 dark:text-zinc-100" : "font-medium text-zinc-700 dark:text-zinc-300"} capitalize truncate`}>
+        {value}
+      </span>
     </div>
   );
 }
