@@ -20,6 +20,23 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  async function handleDevLogin() {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/dev-login", { method: "POST" });
+      if (!res.ok) {
+        const { error } = await res.json();
+        throw new Error(error ?? "Dev login failed");
+      }
+      router.replace("/messages");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Dev login failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -171,6 +188,23 @@ export default function LoginPage() {
               <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-center text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
                 {error}
               </p>
+            )}
+
+            {process.env.NODE_ENV !== "production" && (
+              <div className="mt-6 border-t border-dashed border-zinc-200 pt-6 dark:border-zinc-700">
+                <p className="mb-3 text-center text-xs font-medium text-zinc-400">
+                  DEV ONLY
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleDevLogin}
+                  disabled={loading}
+                  fullWidth
+                >
+                  Sign in as Alex (demo)
+                </Button>
+              </div>
             )}
           </div>
 
