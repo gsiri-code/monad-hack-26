@@ -1,4 +1,4 @@
-import { badRequest, internalError, notFound, ok, parseJsonBody, unauthorized } from "@/lib/api/http";
+import { badRequest, forbidden, internalError, notFound, ok, parseJsonBody, unauthorized } from "@/lib/api/http";
 import { getAuthUser } from "@/lib/db/auth-server";
 import { getSupabaseAdminClient } from "@/lib/db/server";
 import { getContract, getShieldTokenAddress } from "@/lib/contract/client";
@@ -34,6 +34,9 @@ export async function POST(request: Request) {
 
     if (reqError) return internalError(reqError.message);
     if (!req) return notFound("Request not found.");
+    if (user.id !== req.sender && user.id !== req.receiver) {
+      return forbidden("Access denied.");
+    }
     if (req.status !== "open") {
       return badRequest(`Request is already ${req.status}.`);
     }
