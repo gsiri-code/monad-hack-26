@@ -8,6 +8,7 @@ const PUBLIC_API_PATHS = new Set([
   "/api/telegram",
   "/api/telegram/stream",
   "/api/bridge-test", // DEV ONLY — remove before prod
+  "/api/speech",
 ]);
 
 export async function middleware(request: NextRequest) {
