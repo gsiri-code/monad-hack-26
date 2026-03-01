@@ -82,3 +82,8 @@ build/
 pip-log.txt
 pip-delete-this-directory.txt
 supabase/.temp
+.env
+node_modules
+brian/venv
+
+.gitignore
