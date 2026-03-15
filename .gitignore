@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+.build*
+.next*
+
 # next.js
 /.next/
 /out/
@@ -31,8 +34,28 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# brian
+brian/node_modules
+brian/.env
+
+# smart-contracts (Foundry)
+smart-contracts/cache/
+smart-contracts/artifacts/
+smart-contracts/out/
+smart-contracts/node_modules/
+smart-contracts/types/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# env files
+.env.local
+.env.development
+.env.production
+.env.*.local
 
 # vercel
 .vercel
@@ -59,3 +82,8 @@ build/
 pip-log.txt
 pip-delete-this-directory.txt
 supabase/.temp
+.env
+node_modules
+brian/venv
+
+.gitignore

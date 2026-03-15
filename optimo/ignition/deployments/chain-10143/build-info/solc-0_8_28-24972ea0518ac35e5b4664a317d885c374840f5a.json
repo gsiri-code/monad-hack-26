@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-24972ea0518ac35e5b4664a317d885c374840f5a",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/BenmoRegistry.sol": "project/contracts/BenmoRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/BenmoRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\ncontract BenmoRegistry {\n    mapping(bytes32 => string) private handleToUnlinkAddress;\n    mapping(address => bytes32) private ownerToHandle;\n\n    event HandleRegistered(bytes32 indexed handleHash, address indexed owner);\n\n    function registerHandle(string calldata handle, string calldata unlinkAddress) external {\n        bytes32 handleHash = keccak256(abi.encodePacked(handle));\n        require(bytes(handleToUnlinkAddress[handleHash]).length == 0, \"Handle already registered\");\n        require(ownerToHandle[msg.sender] == bytes32(0), \"Wallet already registered a handle\");\n\n        handleToUnlinkAddress[handleHash] = unlinkAddress;\n        ownerToHandle[msg.sender] = handleHash;\n\n        emit HandleRegistered(handleHash, msg.sender);\n    }\n\n    function resolveHandle(string calldata handle) external view returns (string memory) {\n        bytes32 handleHash = keccak256(abi.encodePacked(handle));\n        string memory unlinkAddress = handleToUnlinkAddress[handleHash];\n        require(bytes(unlinkAddress).length > 0, \"Handle not found\");\n        return unlinkAddress;\n    }\n}\n"
+      }
+    }
+  }
+}
