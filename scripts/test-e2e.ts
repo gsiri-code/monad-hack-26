@@ -6,6 +6,7 @@
  */
 
 import { ethers } from "ethers";
+import { createClient } from "@supabase/supabase-js";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -122,21 +123,26 @@ async function main() {
     ok("1/7", "Already approved, skipping.");
   }
 
-  // ── Step 2: Auth tokens ───────────────────────────────────────────────────
+  // ── Step 0: Clean up stale test profiles ─────────────────────────────────
+  log("0/7", "Cleaning up stale test profiles");
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+  await supabase.from("users").delete().in("wallet_address", [SENDER_WALLET, RECEIVER_WALLET]);
+  ok("0/7", "Cleaned.");
+
+  // ── Step 2: Auth tokens + resolve profile uids ───────────────────────────
   log("2/7", "Getting auth tokens via /api/bridge-test");
 
   const auth1 = await api("/api/bridge-test", { body: { email: "sender@venmo-test.com" } });
-  const token1 = auth1.accessToken;
-  const userId1 = auth1.userId;
-  ok("2/7", `Sender   uid=${userId1}`);
+  const token1: string = auth1.accessToken;
 
   const auth2 = await api("/api/bridge-test", { body: { email: "receiver@venmo-test.com" } });
-  const token2 = auth2.accessToken;
-  const userId2 = auth2.userId;
-  ok("2/7", `Receiver uid=${userId2}`);
+  const token2: string = auth2.accessToken;
 
-  // ── Step 3: Create user profiles ─────────────────────────────────────────
-  log("3/7", "Creating user profiles (skips if already exist)");
+  // ── Step 3: Create profiles if needed, then read actual uid from auth/me ─
+  log("3/7", "Creating user profiles (idempotent)");
 
   for (const [label, token, wallet, username, phone] of [
     ["Sender",   token1, SENDER_WALLET,   "alice_shield", "+15550000001"],
@@ -153,6 +159,16 @@ async function main() {
       else throw e;
     }
   }
+
+  // Always resolve uid from auth/me — bridge-test userId can differ across runs
+  const me1 = await api("/api/auth/me", { token: token1 });
+  const me2 = await api("/api/auth/me", { token: token2 });
+
+  const userId1: string = me1.profile?.uid ?? me1.id;
+  const userId2: string = me2.profile?.uid ?? me2.id;
+
+  ok("3/7", `Sender   uid=${userId1}`);
+  ok("3/7", `Receiver uid=${userId2}`);
 
   // ── Step 4: Shield tokens via API ─────────────────────────────────────────
   log("4/7", `POST /api/contract/shield  (${SHIELD_AMOUNT} WMON)`);
